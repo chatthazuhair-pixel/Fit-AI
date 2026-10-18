@@ -25,6 +25,13 @@ NUTR = {
     "milk": (61, 3.2, 4.8, 3.3), "apple": (52, 0.3, 14, 0.2),
     "bread": (265, 9, 49, 3.2), "potato": (87, 1.9, 20, 0.1),
     "yogurt": (61, 3.5, 4.7, 3.3), "oats": (389, 17, 66, 7),
+    # Additional approximate values per 100 g; recipes and brands vary.
+    "chickpeas": (164, 8.9, 27.4, 2.6), "lentils": (116, 9, 20, 0.4),
+    "fish": (128, 26, 0, 2.7), "beef": (250, 26, 0, 15),
+    "cucumber": (15, 0.7, 3.6, 0.1), "tomato": (18, 0.9, 3.9, 0.2),
+    "spinach": (23, 2.9, 3.6, 0.4), "mango": (60, 0.8, 15, 0.4),
+    "dates": (282, 2.5, 75, 0.4), "peanut butter": (588, 25, 20, 50),
+    "paneer": (265, 18, 1.2, 20), "beans": (127, 8.7, 22.8, 0.5),
 }
 PIECE_G = {"roti": 40, "egg": 50, "banana": 118, "apple": 182, "bread": 30, "potato": 150}
 
@@ -178,11 +185,16 @@ def workout(minutes: int = 30, x_user_id: str = Header(None)):
     adult = bool(p and p["age_group"] == "adult")
     level = p["level"] if p and p["level"] in PLANS else "beginner"
     if not adult and level == "advanced": level = "intermediate"
-    n = max(3, min(5, minutes // 8))
+    # Keep duration bounded and the plan approachable. Exercise counts are a
+    # rough guide; actual duration varies with pace, breaks, and experience.
+    minutes = max(5, min(45, minutes))
+    n = max(2, min(5, minutes // 5))
     plan = list(PLANS[level][:n])
     if adult and "dumbbell" in (p["equipment"] or "").lower():
         plan[-1] = ("Dumbbell goblet squat", "3 x 10")
-    note = "Warm up first and stop if anything hurts. This is general guidance, not medical advice."
+    note = (f"Designed as a roughly {minutes}-minute beginner-friendly session; your pace and rest breaks may change the total time. "
+             "Warm up gently, move at a comfortable pace, and stop if you feel pain, dizziness, or unwell. "
+             "This is general guidance, not medical advice.")
     if not adult: note += " Under 18: focus on good form, rest days, and ask a teacher or coach before heavy lifting."
     return {"level": level, "minutes": minutes, "exercises": [{"name": a, "sets": b} for a, b in plan], "note": note}
 
