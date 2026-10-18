@@ -206,7 +206,7 @@ def workout(minutes: int = 30, x_user_id: str = Header(None)):
     n = max(2, min(5, minutes // 5))
     plan = list(PLANS[level][:n])
     equipment = (p["equipment"] or "").lower() if p else ""
-    if "dumbbell" in equipment and level != "beginner" and plan:
+    if adult and "dumbbell" in equipment and level != "beginner" and plan:
         plan[-1] = ("Dumbbell goblet squat", "2 x 10")
         EXERCISE_GUIDES["Dumbbell goblet squat"] = "Hold one dumbbell close to your chest and squat only as far as comfortable. Choose a light load and prioritize control."
     note = (f"Designed as a roughly {minutes}-minute beginner-friendly session; your pace and rest breaks may change the total time. "
