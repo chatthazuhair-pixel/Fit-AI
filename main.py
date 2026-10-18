@@ -203,8 +203,12 @@ def workout(minutes: int = 30, x_user_id: str = Header(None)):
     # Keep duration bounded and the plan approachable. Exercise counts are a
     # rough guide; actual duration varies with pace, breaks, and experience.
     minutes = max(5, min(45, minutes))
-    n = max(2, min(5, minutes // 5))
+    n = max(2, min(5, (minutes + 4) // 5))
+    # Longer choices increase the set count as well as the number of exercises.
+    # This remains an estimate; pace and breaks determine the real duration.
+    set_count = max(1, min(4, (minutes + 9) // 10))
     plan = list(PLANS[level][:n])
+    plan = [(name, re.sub(r"^\\d+", str(set_count), sets)) for name, sets in plan]
     equipment = (p["equipment"] or "").lower() if p else ""
     if adult and "dumbbell" in equipment and level != "beginner" and plan:
         plan[-1] = ("Dumbbell goblet squat", "2 x 10")
