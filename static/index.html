@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FitAI</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{--bg:#eef3f1;--ink:#123029;--mut:#5b7068;--card:#fff;--acc:#1f7a5c;--amb:#f2a541;--line:#d3dfda}
+@media(prefers-color-scheme:dark){:root{--bg:#0f1d19;--ink:#e6f1ed;--mut:#8aa59c;--card:#16282f;--acc:#3fbf93;--line:#274039}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 Outfit,system-ui,sans-serif}
+main{max-width:860px;margin:0 auto;padding:24px 16px 64px}
+h1{font-size:2.4rem;font-weight:800;margin:.2em 0}h2{font-size:1.15rem;margin:0 0 10px}
+.sub{color:var(--mut);margin:0 0 20px}
+section{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px;margin-bottom:16px}
+input,select,textarea,button{font:inherit;padding:9px 12px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--ink);margin:3px 0}
+button{background:var(--acc);color:#fff;border:0;cursor:pointer;font-weight:600}button.ghost{background:none;color:var(--ink);border:1px solid var(--line)}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--amb)}
+.row{display:flex;gap:8px;flex-wrap:wrap}.row>*{flex:1 1 150px}
+.big{font-size:2rem;font-weight:800}.mut{color:var(--mut);font-size:.9rem}#msg{min-height:1.4em;color:var(--acc)}
+li{margin:4px 0}
+</style></head><body><main>
+<h1>FitAI</h1><p class="sub">A simple coach for food, workouts and healthy habits. General guidance only, not medical advice.</p>
+
+<section><h2>Your profile</h2><div class="row">
+<select id="goal"><option value="general_fitness">General fitness</option><option value="strength">Strength</option><option value="healthy_eating">Healthy eating</option></select>
+<select id="level"><option>beginner</option><option>intermediate</option><option>advanced</option></select>
+<input id="equip" placeholder="Equipment (none, dumbbells...)">
+<input id="diet" placeholder="Food preferences"></div>
+<button onclick="saveProfile()">Save profile</button></section>
+
+<section><h2>Log a meal</h2>
+<input id="meal" style="width:100%" placeholder="e.g. 2 roti, 150g daal, 1 egg">
+<button onclick="logMeal()">Add meal</button><div id="msg"></div></section>
+
+<section><h2>Today</h2><div class="row"><div><div class="big" id="kcal">0</div><div class="mut">kcal logged</div></div>
+<div><div class="big" id="prot">0</div><div class="mut">g protein</div></div>
+<div><div class="big" id="wk">0</div><div class="mut">workouts this week</div></div></div>
+<canvas id="chart" height="110"></canvas><ul id="meals"></ul>
+<p class="mut">Calories are estimates from a nutrition table and vary with portion and cooking.</p></section>
+
+<section><h2>Home workout</h2><div class="row"><select id="mins"><option>20</option><option selected>30</option><option>40</option></select>
+<button onclick="getWorkout()">Make my plan</button></div><ul id="plan"></ul><div id="planNote" class="mut"></div>
+<button class="ghost" id="doneBtn" style="display:none" onclick="done()">Mark workout done</button></section>
+
+<section><h2>Ask the coach</h2><textarea id="q" style="width:100%" rows="2" placeholder="Ask about your meals or training"></textarea>
+<button onclick="ask()">Ask</button><p id="ans"></p><div id="use" class="mut"></div></section>
+
+<section><h2>Your data</h2><p class="mut" id="ret"></p>
+<button class="ghost" onclick="exportData()">Download my data</button>
+<button class="ghost" onclick="delData()">Delete all my data</button></section>
+</main>
+<script>
+let uid=localStorage.uid||(localStorage.uid=crypto.randomUUID());
+const H={"X-User-Id":uid,"Content-Type":"application/json"};
+const $=id=>document.getElementById(id);
+async function api(path,method="GET",body){const r=await fetch("/api/"+path,{method,headers:H,body:body?JSON.stringify(body):undefined});
+ const j=await r.json();if(!r.ok)throw new Error(j.detail||"Something went wrong");return j}
+const say=t=>$("msg").textContent=t;
+async function saveProfile(){await api("profile","POST",{goal:$("goal").value,level:$("level").value,equipment:$("equip").value,diet:$("diet").value});say("Profile saved.")}
+async function logMeal(){try{const r=await api("food","POST",{text:$("meal").value});
+ say(r.logged.length?`Added ${r.logged.map(x=>x.name).join(", ")}.`+(r.not_in_database.length?` Not in database yet: ${r.not_in_database.join(", ")}.`:""):"No known foods found. Try 'egg, 2 roti'.");
+ $("meal").value="";load()}catch(e){say(e.message)}}
+let chart;
+async function load(){const d=await api("dashboard");$("kcal").textContent=d.totals.kcal;$("prot").textContent=d.totals.protein;$("wk").textContent=d.workouts_this_week;
+ $("meals").innerHTML=d.meals.map(m=>`<li>${m.name}, ${Math.round(m.grams)} g, ${Math.round(m.kcal)} kcal</li>`).join("")||"<li class='mut'>No meals logged yet. Add your first meal above.</li>";
+ chart&&chart.destroy();chart=new Chart($("chart"),{type:"bar",data:{labels:d.week.map(x=>x.day.slice(5)),datasets:[{label:"kcal per day",data:d.week.map(x=>x.kcal),backgroundColor:"#f2a541"}]},options:{plugins:{legend:{display:false}}}});
+ const u=await api("usage");$("use").textContent=`AI questions today: ${u.used} of ${u.limit}`;$("ret").textContent=`Data older than ${u.retention_days} days is deleted automatically. Your data stays tied to this browser's anonymous ID.`}
+async function getWorkout(){const r=await api("workout?minutes="+$("mins").value);
+ $("plan").innerHTML=r.exercises.map(e=>`<li>${e.name}: ${e.sets}</li>`).join("");$("planNote").textContent=r.note;$("doneBtn").style.display="inline-block"}
+async function done(){await api("workout/done","POST");load()}
+async function ask(){$("ans").textContent="Thinking...";try{$("ans").textContent=(await api("coach","POST",{question:$("q").value})).answer;load()}catch(e){$("ans").textContent=e.message}}
+async function exportData(){const b=new Blob([JSON.stringify(await api("export"),null,2)],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(b);a.download="fitai-data.json";a.click()}
+async function delData(){if(confirm("Delete all your FitAI data? This cannot be undone.")){await api("data","DELETE");say("All your data was deleted.");load()}}
+load();
+</script></body></html>
