@@ -208,7 +208,7 @@ def workout(minutes: int = 30, x_user_id: str = Header(None)):
     # This remains an estimate; pace and breaks determine the real duration.
     set_count = max(1, min(4, (minutes + 9) // 10))
     plan = list(PLANS[level][:n])
-    plan = [(name, re.sub(r"^\\d+", str(set_count), sets)) for name, sets in plan]
+    plan = [(name, re.sub(r"^\d+", str(set_count), sets)) for name, sets in plan]
     equipment = (p["equipment"] or "").lower() if p else ""
     if adult and "dumbbell" in equipment and level != "beginner" and plan:
         plan[-1] = ("Dumbbell goblet squat", "2 x 10")
