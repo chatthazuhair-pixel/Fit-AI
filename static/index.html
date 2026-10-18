@@ -2,74 +2,164 @@
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>FitAI</title>
-<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💪</text></svg>">
+<link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@400;600&family=Sora:wght@600;800&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
-:root{--bg:#eef3f1;--ink:#123029;--mut:#5b7068;--card:#fff;--acc:#1f7a5c;--amb:#f2a541;--line:#d3dfda}
-@media(prefers-color-scheme:dark){:root{--bg:#0f1d19;--ink:#e6f1ed;--mut:#8aa59c;--card:#16282f;--acc:#3fbf93;--line:#274039}}
-*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 Outfit,system-ui,sans-serif}
-main{max-width:860px;margin:0 auto;padding:24px 16px 64px}
-h1{font-size:2.4rem;font-weight:800;margin:.2em 0}h2{font-size:1.15rem;margin:0 0 10px}
-.sub{color:var(--mut);margin:0 0 20px}
-section{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px;margin-bottom:16px}
-input,select,textarea,button{font:inherit;padding:9px 12px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--ink);margin:3px 0}
-button{background:var(--acc);color:#fff;border:0;cursor:pointer;font-weight:600}button.ghost{background:none;color:var(--ink);border:1px solid var(--line)}
-button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--amb)}
-.row{display:flex;gap:8px;flex-wrap:wrap}.row>*{flex:1 1 150px}
-.big{font-size:2rem;font-weight:800}.mut{color:var(--mut);font-size:.9rem}#msg{min-height:1.4em;color:var(--acc)}
-li{margin:4px 0}
-</style></head><body><main>
-<h1>FitAI</h1><p class="sub">A simple coach for food, workouts and healthy habits. General guidance only, not medical advice.</p>
+:root{--bg:#f3f6fb;--ink:#0d1b2a;--mut:#5a6b7f;--card:#fff;--line:#dbe3ef;--blue:#2b59ff;--pro:#2b59ff;--carb:#ffb703;--fat:#fb5607;--ok:#12a36b}
+@media(prefers-color-scheme:dark){:root{--bg:#0b1320;--ink:#e8eef8;--mut:#93a4bb;--card:#131f33;--line:#23324b;--blue:#6f8cff;--pro:#6f8cff}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 "Nunito Sans",system-ui,sans-serif}
+h1,h2,h3,.big{font-family:Sora,system-ui,sans-serif;margin:0}
+header{position:sticky;top:0;z-index:5;background:var(--bg);border-bottom:1px solid var(--line)}
+.bar{max-width:980px;margin:auto;padding:12px 16px;display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+.logo{font:800 1.5rem Sora;letter-spacing:-.02em}.logo b{color:var(--blue)}
+nav{display:flex;gap:4px;margin-left:auto;overflow-x:auto}
+nav button{background:none;border:0;color:var(--mut);padding:8px 14px;border-radius:999px;font:600 .95rem "Nunito Sans";cursor:pointer}
+nav button[aria-current=true]{background:var(--blue);color:#fff}
+main{max-width:980px;margin:auto;padding:20px 16px 80px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:20px;margin-bottom:16px}
+.grid{display:grid;grid-template-columns:minmax(240px,320px) 1fr;gap:16px}@media(max-width:700px){.grid{grid-template-columns:1fr}}
+.ringwrap{position:relative;max-width:300px;margin:auto}.center{position:absolute;inset:0;display:grid;place-content:center;text-align:center;pointer-events:none}
+.big{font-size:2.6rem;font-weight:800;line-height:1}.mut{color:var(--mut);font-size:.9rem}
+.macros{display:grid;gap:10px;align-content:center}
+.macro{display:flex;align-items:center;gap:12px;padding:12px 14px;border:1px solid var(--line);border-radius:12px;cursor:pointer;background:none;color:inherit;text-align:left;font:inherit}
+.macro i{width:12px;height:12px;border-radius:50%}.macro strong{margin-left:auto;font:800 1.2rem Sora}.macro.off{opacity:.4}
+input,select,textarea,button{font:inherit}
+input,select,textarea{width:100%;padding:11px 13px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--ink)}
+.btn{background:var(--blue);color:#fff;border:0;padding:11px 18px;border-radius:10px;font-weight:600;cursor:pointer}
+.btn.ghost{background:none;color:var(--ink);border:1px solid var(--line)}.btn:disabled{opacity:.45;cursor:not-allowed}
+:focus-visible{outline:3px solid var(--carb);outline-offset:2px}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}
+.chip{border:1px solid var(--line);background:none;color:var(--ink);padding:7px 13px;border-radius:999px;cursor:pointer}
+.chip:hover,.chip[aria-pressed=true]{background:var(--blue);color:#fff;border-color:var(--blue)}
+.row{display:flex;gap:10px;flex-wrap:wrap}.row>*{flex:1 1 160px}.row>.btn{flex:0 0 auto}
+.meal{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--line)}
+.ex{display:flex;gap:14px;align-items:center;padding:14px;border:1px solid var(--line);border-radius:12px;margin-bottom:10px;cursor:pointer}
+.ex input{width:22px;height:22px;accent-color:var(--ok)}.ex.done{opacity:.55}.ex.done b{text-decoration:line-through}
+.prog{height:10px;background:var(--line);border-radius:9px;overflow:hidden;margin:12px 0}.prog div{height:100%;width:0;background:var(--ok);transition:width .3s}
+.chat{display:grid;gap:10px;margin-bottom:14px;max-height:50vh;overflow:auto}
+.bub{padding:12px 15px;border-radius:14px;max-width:85%;white-space:pre-wrap}.me{background:var(--blue);color:#fff;justify-self:end}.ai{background:var(--bg);border:1px solid var(--line)}
+.pill{display:inline-block;background:var(--bg);border:1px solid var(--line);border-radius:999px;padding:3px 12px;font-size:.85rem}
+#toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 18px;border-radius:10px;opacity:0;transition:opacity .25s;pointer-events:none}#toast.on{opacity:1}
+.view[hidden]{display:none}h2{font-size:1.2rem;margin-bottom:12px}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style></head><body>
+<header><div class="bar"><div class="logo">Fit<b>AI</b></div>
+<nav id="nav"><button data-v="today">Today</button><button data-v="meals">Meals</button><button data-v="train">Train</button><button data-v="coach">Coach</button><button data-v="data">My data</button></nav></div></header>
+<main>
+<section class="view" id="today">
+ <div class="card" id="welcome" hidden><h2>Welcome! Let’s set up your coach</h2>
+  <p class="mut">Your answers shape the workouts and advice. We store an age group, not your birthday.</p>
+  <div class="row"><select id="w_age" aria-label="Age group"><option value="">Age group…</option><option value="teen">Under 18</option><option value="adult">18 or older</option></select>
+  <select id="w_goal" aria-label="Goal"><option value="general_fitness">General fitness</option><option value="strength">Strength</option><option value="healthy_eating">Healthy eating</option></select>
+  <select id="w_level" aria-label="Level"><option>beginner</option><option>intermediate</option><option>advanced</option></select>
+  <input id="w_equip" placeholder="Equipment (none, dumbbells)"><button class="btn" id="w_save">Start</button></div>
+  <p class="mut" id="w_note"></p></div>
+ <div class="grid">
+  <div class="card"><div class="ringwrap"><canvas id="ring"></canvas><div class="center"><div class="big" id="kcal">0</div><div class="mut" id="ringsub">kcal today</div></div></div></div>
+  <div class="card"><h2>Today’s macros</h2><div class="macros" id="macros"></div><p class="mut">Tap a macro to hide it from the ring. Values are estimates from a nutrition table.</p></div>
+ </div>
+ <div class="card"><h2>Last 7 days</h2><canvas id="week" height="120"></canvas></div>
+ <div class="card"><h2>What today’s calories came from</h2><canvas id="items" height="110"></canvas><p class="mut" id="itemsEmpty"></p></div>
+</section>
 
-<section><h2>Your profile</h2><div class="row">
-<select id="goal"><option value="general_fitness">General fitness</option><option value="strength">Strength</option><option value="healthy_eating">Healthy eating</option></select>
-<select id="level"><option>beginner</option><option>intermediate</option><option>advanced</option></select>
-<input id="equip" placeholder="Equipment (none, dumbbells...)">
-<input id="diet" placeholder="Food preferences"></div>
-<button onclick="saveProfile()">Save profile</button></section>
+<section class="view" id="meals" hidden>
+ <div class="card"><h2>Log a meal</h2>
+  <div class="row"><input id="meal" placeholder="e.g. 2 roti, 150g daal, 1 egg" aria-label="Meal"><button class="btn" id="addMeal">Add meal</button></div>
+  <p class="mut">Quick add</p><div class="chips" id="quick"></div></div>
+ <div class="card"><h2>Today’s meals</h2><div id="mealList"></div></div>
+</section>
 
-<section><h2>Log a meal</h2>
-<input id="meal" style="width:100%" placeholder="e.g. 2 roti, 150g daal, 1 egg">
-<button onclick="logMeal()">Add meal</button><div id="msg"></div></section>
+<section class="view" id="train" hidden>
+ <div class="card"><h2>Your setup</h2><div class="row">
+  <select id="age" aria-label="Age group"><option value="">Age group…</option><option value="teen">Under 18</option><option value="adult">18 or older</option></select>
+  <select id="goal" aria-label="Goal"><option value="general_fitness">General fitness</option><option value="strength">Strength</option><option value="healthy_eating">Healthy eating</option></select>
+  <select id="level" aria-label="Level"><option>beginner</option><option>intermediate</option><option>advanced</option></select>
+  <input id="equip" placeholder="Equipment (none, dumbbells)"><input id="diet" placeholder="Food preferences">
+  <button class="btn" id="saveProfile">Save</button></div></div>
+ <div class="card"><h2>Home workout</h2><p class="mut">How long do you have?</p>
+  <div class="chips" id="mins"><button class="chip" data-m="20">20 min</button><button class="chip" data-m="30" aria-pressed="true">30 min</button><button class="chip" data-m="40">40 min</button></div>
+  <button class="btn" id="makePlan">Make my plan</button>
+  <div id="planBox" hidden><div class="prog"><div id="pbar"></div></div><div id="plan"></div>
+  <div class="row"><button class="btn ghost" id="rest">Rest 30 s</button><button class="btn" id="finish" disabled>Finish workout</button></div><p class="mut" id="planNote"></p></div></div>
+ <p class="mut">This week: <b id="wk">0</b> workouts finished</p>
+</section>
 
-<section><h2>Today</h2><div class="row"><div><div class="big" id="kcal">0</div><div class="mut">kcal logged</div></div>
-<div><div class="big" id="prot">0</div><div class="mut">g protein</div></div>
-<div><div class="big" id="wk">0</div><div class="mut">workouts this week</div></div></div>
-<canvas id="chart" height="110"></canvas><ul id="meals"></ul>
-<p class="mut">Calories are estimates from a nutrition table and vary with portion and cooking.</p></section>
+<section class="view" id="coach" hidden>
+ <div class="card"><h2>Ask the coach</h2><div class="chat" id="chat"><div class="bub ai">Hi! Ask me about your meals, workouts, or healthy habits. I give general guidance, not medical advice.</div></div>
+  <div class="chips" id="prompts"></div>
+  <div class="row"><input id="q" placeholder="Type a question" aria-label="Question"><button class="btn" id="ask">Ask</button></div>
+  <p><span class="pill" id="use"></span></p></div>
+</section>
 
-<section><h2>Home workout</h2><div class="row"><select id="mins"><option>20</option><option selected>30</option><option>40</option></select>
-<button onclick="getWorkout()">Make my plan</button></div><ul id="plan"></ul><div id="planNote" class="mut"></div>
-<button class="ghost" id="doneBtn" style="display:none" onclick="done()">Mark workout done</button></section>
+<section class="view" id="data" hidden>
+ <div class="card"><h2>Your data</h2><p id="ret" class="mut"></p>
+ <div class="row"><button class="btn ghost" id="exp">Download my data</button><button class="btn ghost" id="del">Delete all my data</button></div></div>
+</section>
+</main><div id="toast" role="status"></div>
 
-<section><h2>Ask the coach</h2><textarea id="q" style="width:100%" rows="2" placeholder="Ask about your meals or training"></textarea>
-<button onclick="ask()">Ask</button><p id="ans"></p><div id="use" class="mut"></div></section>
-
-<section><h2>Your data</h2><p class="mut" id="ret"></p>
-<button class="ghost" onclick="exportData()">Download my data</button>
-<button class="ghost" onclick="delData()">Delete all my data</button></section>
-</main>
 <script>
-let uid=localStorage.uid||(localStorage.uid=crypto.randomUUID());
-const H={"X-User-Id":uid,"Content-Type":"application/json"};
-const $=id=>document.getElementById(id);
-async function api(path,method="GET",body){const r=await fetch("/api/"+path,{method,headers:H,body:body?JSON.stringify(body):undefined});
+const uid=localStorage.uid||(localStorage.uid=crypto.randomUUID());
+const $=s=>document.querySelector(s), css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const el=(t,c,x)=>{const e=document.createElement(t);if(c)e.className=c;if(x!=null)e.textContent=x;return e};
+async function api(p,m="GET",b){const r=await fetch("/api/"+p,{method:m,headers:{"X-User-Id":uid,"Content-Type":"application/json"},body:b?JSON.stringify(b):undefined});
  const j=await r.json();if(!r.ok)throw new Error(j.detail||"Something went wrong");return j}
-const say=t=>$("msg").textContent=t;
-async function saveProfile(){await api("profile","POST",{goal:$("goal").value,level:$("level").value,equipment:$("equip").value,diet:$("diet").value});say("Profile saved.")}
-async function logMeal(){try{const r=await api("food","POST",{text:$("meal").value});
- say(r.logged.length?`Added ${r.logged.map(x=>x.name).join(", ")}.`+(r.not_in_database.length?` Not in database yet: ${r.not_in_database.join(", ")}.`:""):"No known foods found. Try 'egg, 2 roti'.");
- $("meal").value="";load()}catch(e){say(e.message)}}
-let chart;
-async function load(){const d=await api("dashboard");$("kcal").textContent=d.totals.kcal;$("prot").textContent=d.totals.protein;$("wk").textContent=d.workouts_this_week;
- $("meals").innerHTML=d.meals.map(m=>`<li>${m.name}, ${Math.round(m.grams)} g, ${Math.round(m.kcal)} kcal</li>`).join("")||"<li class='mut'>No meals logged yet. Add your first meal above.</li>";
- chart&&chart.destroy();chart=new Chart($("chart"),{type:"bar",data:{labels:d.week.map(x=>x.day.slice(5)),datasets:[{label:"kcal per day",data:d.week.map(x=>x.kcal),backgroundColor:"#f2a541"}]},options:{plugins:{legend:{display:false}}}});
- const u=await api("usage");$("use").textContent=`AI questions today: ${u.used} of ${u.limit}`;$("ret").textContent=`Data older than ${u.retention_days} days is deleted automatically. Your data stays tied to this browser's anonymous ID.`}
-async function getWorkout(){const r=await api("workout?minutes="+$("mins").value);
- $("plan").innerHTML=r.exercises.map(e=>`<li>${e.name}: ${e.sets}</li>`).join("");$("planNote").textContent=r.note;$("doneBtn").style.display="inline-block"}
-async function done(){await api("workout/done","POST");load()}
-async function ask(){$("ans").textContent="Thinking...";try{$("ans").textContent=(await api("coach","POST",{question:$("q").value})).answer;load()}catch(e){$("ans").textContent=e.message}}
-async function exportData(){const b=new Blob([JSON.stringify(await api("export"),null,2)],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(b);a.download="fitai-data.json";a.click()}
-async function delData(){if(confirm("Delete all your FitAI data? This cannot be undone.")){await api("data","DELETE");say("All your data was deleted.");load()}}
-load();
+let tt;function toast(t){const e=$("#toast");e.textContent=t;e.classList.add("on");clearTimeout(tt);tt=setTimeout(()=>e.classList.remove("on"),2600)}
+function show(v){document.querySelectorAll(".view").forEach(e=>e.hidden=e.id!==v);
+ document.querySelectorAll("#nav button").forEach(b=>b.setAttribute("aria-current",b.dataset.v===v));history.replaceState(null,"","#"+v);if(v==="today")load()}
+$("#nav").onclick=e=>e.target.dataset.v&&show(e.target.dataset.v);
+
+const MAC=[["protein","Protein",()=>css("--pro")],["carbs","Carbs",()=>css("--carb")],["fat","Fat",()=>css("--fat")]];
+let ring,week,items,hidden=new Set(),last;
+function drawRing(){const t=last.totals,keys=MAC.filter(m=>!hidden.has(m[0]));const sum=keys.reduce((a,m)=>a+t[m[0]],0);
+ ring&&ring.destroy();Chart.defaults.color=css("--mut");
+ ring=new Chart($("#ring"),{type:"doughnut",data:{labels:keys.map(m=>m[1]),datasets:[{data:sum?keys.map(m=>t[m[0]]):[1],backgroundColor:sum?keys.map(m=>m[2]()):[css("--line")],borderWidth:0}]},
+  options:{cutout:"72%",animation:{duration:500},plugins:{legend:{display:false},tooltip:{enabled:!!sum,callbacks:{label:c=>` ${c.label}: ${c.parsed} g`}}}}})}
+function drawWeek(){const d=last.week,map=Object.fromEntries(d.map(x=>[x.day,x.kcal])),days=[];
+ for(let i=6;i>=0;i--){const x=new Date();x.setDate(x.getDate()-i);days.push(x.toISOString().slice(0,10))}
+ week&&week.destroy();
+ week=new Chart($("#week"),{type:"bar",data:{labels:days.map(x=>new Date(x+"T12:00").toLocaleDateString(undefined,{weekday:"short"})),
+  datasets:[{data:days.map(x=>map[x]||0),borderRadius:8,backgroundColor:days.map((x,i)=>i===6?css("--blue"):css("--line"))}]},
+  options:{plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>` ${c.parsed.y} kcal`}}},scales:{y:{beginAtZero:true,grid:{color:css("--line")}},x:{grid:{display:false}}}}})}
+function drawItems(){const m=last.meals;items&&items.destroy();$("#itemsEmpty").textContent=m.length?"":"Nothing logged yet. Add a meal in the Meals tab.";
+ items=new Chart($("#items"),{type:"bar",data:{labels:m.map(x=>x.name),datasets:[{data:m.map(x=>Math.round(x.kcal)),borderRadius:6,backgroundColor:css("--carb")}]},
+  options:{indexAxis:"y",plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>` ${c.parsed.x} kcal`}}},scales:{x:{beginAtZero:true,grid:{color:css("--line")}},y:{grid:{display:false}}}}})}
+async function load(){last=await api("dashboard");const t=last.totals;$("#kcal").textContent=t.kcal;$("#wk").textContent=last.workouts_this_week;
+ const box=$("#macros");box.innerHTML="";MAC.forEach(([k,n,c])=>{const b=el("button","macro"+(hidden.has(k)?" off":""));b.append(el("i"));b.firstChild.style.background=c();b.append(el("span",null,n),el("strong",null,t[k]+" g"));
+  b.onclick=()=>{hidden.has(k)?hidden.delete(k):hidden.add(k);load()};box.append(b)});
+ drawRing();drawWeek();drawItems();
+ const L=$("#mealList");L.innerHTML="";last.meals.length?last.meals.forEach(m=>{const r=el("div","meal");r.append(el("span",null,`${m.name}, ${Math.round(m.grams)} g`),el("b",null,Math.round(m.kcal)+" kcal"));L.append(r)}):L.append(el("p","mut","No meals yet. Add your first one above."));
+ const u=await api("usage");$("#use").textContent=`AI questions today: ${u.used} of ${u.limit}`;$("#ret").textContent=`Data older than ${u.retention_days} days is deleted automatically. It is tied to an anonymous ID in this browser.`}
+
+async function logMeal(text){try{const r=await api("food","POST",{text});
+ toast(r.logged.length?"Added "+r.logged.map(x=>x.name).join(", ")+(r.not_in_database.length?` (not in database: ${r.not_in_database.join(", ")})`:""):"No known foods found. Try “egg, 2 roti”.");load()}catch(e){toast(e.message)}}
+$("#addMeal").onclick=()=>{logMeal($("#meal").value);$("#meal").value=""};$("#meal").onkeydown=e=>e.key==="Enter"&&$("#addMeal").click();
+["1 roti","1 egg","150g rice","150g daal","1 banana","200g milk","1 apple","100g chicken breast"].forEach(t=>{const b=el("button","chip","+ "+t);b.onclick=()=>logMeal(t);$("#quick").append(b)});
+
+async function saveProf(age,goal,level,equip,diet){if(!age){toast("Choose your age group first");return false}
+ try{await api("profile","POST",{age_group:age,goal,level,equipment:equip,diet});return true}catch(e){toast(e.message);return false}}
+async function initProfile(){try{const p=await api("profile");$("#welcome").hidden=!!p.age_group;
+ if(p.age_group){$("#age").value=p.age_group;$("#goal").value=p.goal;$("#level").value=p.level;$("#equip").value=p.equipment||"";$("#diet").value=p.diet||""}}catch(e){}}
+$("#saveProfile").onclick=async()=>{if(await saveProf($("#age").value,$("#goal").value,$("#level").value,$("#equip").value,$("#diet").value))toast("Saved")};
+$("#w_save").onclick=async()=>{if(await saveProf($("#w_age").value,$("#w_goal").value,$("#w_level").value,$("#w_equip").value,"")){toast("You’re all set");initProfile()}};
+$("#w_age").onchange=()=>$("#w_note").textContent=$("#w_age").value==="teen"?"Under 18: the coach focuses on balanced meals and general activity, and won’t give weight-loss advice.":"";
+let mins=30;$("#mins").onclick=e=>{if(!e.target.dataset.m)return;mins=+e.target.dataset.m;document.querySelectorAll("#mins .chip").forEach(c=>c.setAttribute("aria-pressed",c===e.target))};
+function upd(){const all=[...document.querySelectorAll("#plan input")],n=all.filter(i=>i.checked).length;$("#pbar").style.width=(n/all.length*100)+"%";$("#finish").disabled=n<all.length}
+$("#makePlan").onclick=async()=>{const r=await api("workout?minutes="+mins);const P=$("#plan");P.innerHTML="";
+ r.exercises.forEach(x=>{const l=el("label","ex"),c=el("input");c.type="checkbox";c.onchange=()=>{l.classList.toggle("done",c.checked);upd()};
+  const d=el("div");d.append(el("b",null,x.name),el("div","mut",x.sets));l.append(c,d);P.append(l)});
+ $("#planNote").textContent=r.note;$("#planBox").hidden=false;upd()};
+let rt;$("#rest").onclick=()=>{clearInterval(rt);let s=30;const b=$("#rest");b.textContent=`Rest ${s} s`;rt=setInterval(()=>{s--;b.textContent=s>0?`Rest ${s} s`:"Rest 30 s";if(s<=0){clearInterval(rt);toast("Rest over. Next set!")}},1000)};
+$("#finish").onclick=async()=>{await api("workout/done","POST");toast("Workout saved. Nice work!");$("#planBox").hidden=true;load()};
+
+function say(t,c){const b=el("div","bub "+c,t);$("#chat").append(b);b.scrollIntoView({block:"end"});return b}
+async function ask(q){if(!q.trim())return;say(q,"me");$("#q").value="";const w=say("Thinking…","ai");
+ try{w.textContent=(await api("coach","POST",{question:q})).answer;load()}catch(e){w.textContent=e.message}}
+$("#ask").onclick=()=>ask($("#q").value);$("#q").onkeydown=e=>e.key==="Enter"&&ask($("#q").value);
+["What should I eat after a workout?","Give me a 5-minute stretch routine","How can I eat more protein with local foods?"].forEach(t=>{const b=el("button","chip",t);b.onclick=()=>ask(t);$("#prompts").append(b)});
+
+$("#exp").onclick=async()=>{const a=el("a");a.href=URL.createObjectURL(new Blob([JSON.stringify(await api("export"),null,2)],{type:"application/json"}));a.download="fitai-data.json";a.click()};
+$("#del").onclick=async()=>{if(confirm("Delete all your FitAI data? This cannot be undone.")){await api("data","DELETE");toast("All your data was deleted");load()}};
+matchMedia("(prefers-color-scheme:dark)").onchange=()=>location.reload();
+initProfile();show(location.hash.slice(1)||"today");
 </script></body></html>

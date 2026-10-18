@@ -4,11 +4,12 @@ import httpx
 from fastapi import FastAPI, Header, HTTPException
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
+from typing import Literal
 from pydantic import BaseModel
 
 DB = os.getenv("DB_PATH", "fitai.db")
 KEY = os.getenv("GEMINI_API_KEY", "")
-MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
+MODEL = os.getenv("GEMINI_MODEL", "gemini-flash-latest")
 USER_LIMIT = int(os.getenv("USER_DAILY_LIMIT", "10"))
 GLOBAL_LIMIT = int(os.getenv("GLOBAL_DAILY_LIMIT", "200"))
 RETENTION_DAYS = int(os.getenv("RETENTION_DAYS", "60"))
@@ -38,6 +39,8 @@ def init():
         CREATE TABLE IF NOT EXISTS ai_usage(uid TEXT, day TEXT, n INTEGER, PRIMARY KEY(uid, day));
         CREATE TABLE IF NOT EXISTS workouts(id INTEGER PRIMARY KEY AUTOINCREMENT, uid TEXT, day TEXT);
         """)
+        try: c.execute("ALTER TABLE profiles ADD COLUMN age_group TEXT")
+        except sqlite3.OperationalError: pass
 
 def cleanup():
     """Retention: delete data older than RETENTION_DAYS."""
@@ -69,7 +72,7 @@ def spend_ai(uid):
 def gemini(prompt, system, json_mode=False):
     if not KEY:
         raise HTTPException(503, "GEMINI_API_KEY is not set on the server.")
-    cfg = {"maxOutputTokens": 1000}
+    cfg = {"maxOutputTokens": 2048}
     if json_mode: cfg["responseMimeType"] = "application/json"
     body = {"systemInstruction": {"parts": [{"text": system}]},
             "contents": [{"role": "user", "parts": [{"text": prompt}]}],
@@ -79,7 +82,8 @@ def gemini(prompt, system, json_mode=False):
                        headers={"x-goog-api-key": KEY}, json=body, timeout=30)
         r.raise_for_status()
         return r.json()["candidates"][0]["content"]["parts"][0]["text"]
-    except Exception:
+    except Exception as e:
+        print("Gemini error:", e)
         raise HTTPException(502, "The AI service is unavailable right now.")
 
 def fallback_parse(text):
@@ -95,7 +99,7 @@ def fallback_parse(text):
     return items
 
 class Profile(BaseModel):
-    goal: str; level: str; equipment: str; diet: str = ""
+    age_group: Literal["teen", "adult"]; goal: str; level: str; equipment: str; diet: str = ""
 class Meal(BaseModel):
     text: str
 class Ask(BaseModel):
@@ -105,9 +109,16 @@ class Ask(BaseModel):
 def save_profile(p: Profile, x_user_id: str = Header(None)):
     uid = uid_ok(x_user_id)
     with db() as c:
-        c.execute("INSERT OR REPLACE INTO profiles VALUES(?,?,?,?,?)",
-                  (uid, p.goal[:30], p.level[:20], p.equipment[:60], p.diet[:60]))
+        c.execute("INSERT OR REPLACE INTO profiles(uid,goal,level,equipment,diet,age_group) VALUES(?,?,?,?,?,?)",
+                  (uid, p.goal[:30], p.level[:20], p.equipment[:60], p.diet[:60], p.age_group))
     return {"ok": True}
+
+@app.get("/api/profile")
+def get_profile(x_user_id: str = Header(None)):
+    uid = uid_ok(x_user_id)
+    with db() as c:
+        r = c.execute("SELECT goal,level,equipment,diet,age_group FROM profiles WHERE uid=?", (uid,)).fetchone()
+    return dict(r) if r else {}
 
 @app.post("/api/food")
 def log_food(m: Meal, x_user_id: str = Header(None)):
@@ -163,14 +174,17 @@ def workout(minutes: int = 30, x_user_id: str = Header(None)):
     """Rules-based plan. No AI involved, so it is predictable and safe."""
     uid = uid_ok(x_user_id)
     with db() as c:
-        p = c.execute("SELECT level, equipment FROM profiles WHERE uid=?", (uid,)).fetchone()
+        p = c.execute("SELECT level, equipment, age_group FROM profiles WHERE uid=?", (uid,)).fetchone()
+    adult = bool(p and p["age_group"] == "adult")
     level = p["level"] if p and p["level"] in PLANS else "beginner"
+    if not adult and level == "advanced": level = "intermediate"
     n = max(3, min(5, minutes // 8))
     plan = list(PLANS[level][:n])
-    if p and "dumbbell" in (p["equipment"] or "").lower():
+    if adult and "dumbbell" in (p["equipment"] or "").lower():
         plan[-1] = ("Dumbbell goblet squat", "3 x 10")
-    return {"level": level, "minutes": minutes, "exercises": [{"name": a, "sets": b} for a, b in plan],
-            "note": "Warm up first and stop if anything hurts. This is general guidance, not medical advice."}
+    note = "Warm up first and stop if anything hurts. This is general guidance, not medical advice."
+    if not adult: note += " Under 18: focus on good form, rest days, and ask a teacher or coach before heavy lifting."
+    return {"level": level, "minutes": minutes, "exercises": [{"name": a, "sets": b} for a, b in plan], "note": note}
 
 @app.post("/api/workout/done")
 def workout_done(x_user_id: str = Header(None)):
@@ -183,15 +197,19 @@ COACH_RULES = ("You are FitAI, a friendly general fitness and healthy-eating coa
                "extreme restriction or training through pain. For medical issues, injuries, or if the user may be under 18 and "
                "asks about losing weight, tell them to talk to a doctor or qualified professional. Use only the data provided.")
 
+TEEN_RULES = (" The user is under 18 or their age is unknown: never discuss losing weight, calorie targets, or restrictive eating. "
+              "Focus on balanced meals, sleep, play, and general activity, and suggest talking to a parent, doctor, or school coach about body-weight concerns.")
+
 @app.post("/api/coach")
 def coach(a: Ask, x_user_id: str = Header(None)):
     uid = uid_ok(x_user_id)
     spend_ai(uid)
     d = dashboard(x_user_id)
     with db() as c:
-        p = c.execute("SELECT goal, level, equipment, diet FROM profiles WHERE uid=?", (uid,)).fetchone()
+        p = c.execute("SELECT goal, level, equipment, diet, age_group FROM profiles WHERE uid=?", (uid,)).fetchone()
+    rules = COACH_RULES if (p and p["age_group"] == "adult") else COACH_RULES + TEEN_RULES
     ctx = f"Profile: {dict(p) if p else 'none'}. Today's totals: {d['totals']}. Workouts this week: {d['workouts_this_week']}."
-    return {"answer": gemini(f"{ctx}\nQuestion: {a.question[:500]}", COACH_RULES)}
+    return {"answer": gemini(f"{ctx}\nQuestion: {a.question[:500]}", rules)}
 
 @app.get("/api/usage")
 def usage(x_user_id: str = Header(None)):
