@@ -1,23 +1,20 @@
 # FitAI
 
-AI-assisted nutrition and home-workout coach. FastAPI + SQLite + Gemini API.
+A practical fitness companion for beginners who want to build a consistent at-home routine with workouts that fit their time, experience, and available equipment.
 
-## Run locally
-```
-python -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
-pip install -r requirements.txt
-export GEMINI_API_KEY=your_key                      # Windows: set GEMINI_API_KEY=your_key
-uvicorn main:app --reload
-```
-Open http://127.0.0.1:8000
+**Try FitAI:** https://fit-jgqg52cra-chatthazuhair-4141.vercel.app
 
-## Design
-- Calories come from a nutrition table, never from the AI's memory. Gemini only reads meal text and writes coaching text.
-- Workouts are rules-based. Gemini never invents exercises.
-- Per-user and global daily AI caps protect the free quota.
-- Data older than RETENTION_DAYS is deleted at startup. Users can export or delete their data.
-- General guidance only, not medical advice.
+## What you can do
+- Create a simple profile to personalize general fitness guidance.
+- Choose a short or longer at-home workout.
+- Follow a guided exercise sequence and track completed sessions.
+- Log everyday foods using approximate nutrition estimates.
+- Ask the AI coach for general fitness and healthy-habit guidance.
+- Export or delete the data associated with your browser ID.
 
-## Known limits
-- Starter nutrition table is small and approximate. Verify against USDA FoodData Central.
-- Anonymous per-browser ID, no real accounts yet.
+## Important notes
+- FitAI provides general information, not medical advice or a substitute for a qualified professional.
+- Nutrition values and portion estimates are approximate; homemade recipes and brands vary.
+- If you are under 18, the coach avoids weight-loss targets and restrictive eating advice.
+- Data is associated with an anonymous browser ID. Clearing browser storage may make that ID inaccessible.
+- The public version's data persistence depends on its hosting configuration. Do not use it to store sensitive information.
