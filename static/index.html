@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>FitAI</title>
+<title>FitAI — Small steps. Stronger habits.</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💪</text></svg>">
 <link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@400;600&family=Sora:wght@600;800&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
@@ -53,6 +53,30 @@ input,select,textarea{width:100%;padding:11px 13px;border-radius:10px;border:1px
 #toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 18px;border-radius:10px;opacity:0;transition:opacity .25s;pointer-events:none}#toast.on{opacity:1}
 .view[hidden]{display:none}h2{font-size:1.2rem;margin-bottom:12px}
 @media(prefers-reduced-motion:reduce){*{transition:none!important}}
+
+/* FitAI visual foundation — milestone 1 */
+:root{--bg:#f5f7fc;--ink:#10172a;--mut:#66738a;--card:#fff;--line:#e3e8f2;--blue:#365cff;--pro:#365cff;--ok:#149b75;--carb:#f4b740;--fat:#f07857;--shadow:0 18px 48px rgba(25,42,85,.07)}
+body{background:radial-gradient(ellipse at 12% 0%,rgba(54,92,255,.07),transparent 32%),var(--bg);letter-spacing:-.01em}
+header{background:rgba(255,255,255,.88);backdrop-filter:blur(18px);border-bottom:1px solid rgba(220,227,240,.9)}
+.bar{max-width:1180px;padding:14px 24px;gap:24px}.logo{font-size:1.7rem;letter-spacing:-.075em}.logo b{color:var(--blue)}
+nav{gap:6px}nav button{padding:10px 16px;font-weight:700;border-radius:12px;white-space:nowrap}nav button[aria-current=true]{box-shadow:0 7px 18px rgba(54,92,255,.22)}nav button:hover{background:#edf1ff;color:var(--blue)}
+main{max-width:1180px;padding:34px 24px 96px}
+.card{border-color:rgba(220,227,240,.9);border-radius:24px;padding:clamp(20px,3vw,30px);box-shadow:var(--shadow);margin-bottom:20px}
+.hero{padding:clamp(28px,5vw,58px);border:1px solid #e0e7ff;background:linear-gradient(120deg,#fff 5%,#f6f8ff 62%,#edf1ff 100%);border-radius:30px;box-shadow:0 22px 65px rgba(40,65,130,.09)}
+.hero:after{content:"";position:absolute;width:300px;height:300px;right:-95px;top:-130px;border-radius:50%;background:radial-gradient(circle,rgba(54,92,255,.15),rgba(54,92,255,0) 68%);pointer-events:none}
+.eyebrow{font-size:.72rem;letter-spacing:.16em;font-weight:900;margin-bottom:12px}.hero h1{font-size:clamp(2.15rem,5vw,4rem);line-height:1.06;letter-spacing:-.065em;max-width:760px;margin-bottom:18px}.hero p{font-size:clamp(1rem,1.7vw,1.16rem);line-height:1.75;max-width:640px;margin-bottom:24px}
+.hero-actions{gap:12px}.btn{padding:13px 19px;border-radius:13px;font-weight:800;box-shadow:0 5px 12px rgba(54,92,255,.12)}.btn.ghost{box-shadow:none;background:#fff;border-color:#dce4f4}.btn:hover{filter:none;transform:translateY(-2px);box-shadow:0 10px 22px rgba(54,92,255,.16)}
+.section-intro{line-height:1.7}.grid{grid-template-columns:minmax(250px,.8fr) 1.2fr;gap:20px}.card h2{font-size:1.18rem;letter-spacing:-.035em;margin-bottom:16px}
+input,select,textarea{border-radius:13px;padding:13px 15px;background:#f8faff;border-color:#e0e6f1}input:focus,select:focus,textarea:focus{background:#fff;border-color:var(--blue)}
+.chip{padding:8px 14px;border-radius:999px;background:#fff;font-weight:700}.pill{background:#f4f6ff;border-color:#e2e7ff}
+.ex{border-radius:16px;background:#fff;transition:border-color .18s,transform .18s,box-shadow .18s}.ex:hover{transform:translateY(-1px);box-shadow:0 8px 22px rgba(25,42,85,.06)}.ex input{flex:0 0 22px}
+#guideCard{background:linear-gradient(145deg,#f7f9ff,#fff);border-color:#dfe6ff}
+#toast{z-index:10;box-shadow:0 12px 30px rgba(0,0,0,.16)}
+.feature-strip{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin:20px 0 24px}
+.feature-tile{background:rgba(255,255,255,.88);border:1px solid var(--line);border-radius:20px;padding:20px;min-height:135px;box-shadow:0 8px 24px rgba(25,42,85,.035)}
+.feature-icon{display:grid;place-items:center;width:42px;height:42px;border-radius:14px;background:#edf1ff;color:var(--blue);font-size:1.2rem;margin-bottom:14px}
+.feature-tile strong{display:block;font-family:Sora,system-ui,sans-serif;font-size:.95rem;letter-spacing:-.03em;margin-bottom:5px}.feature-tile p{color:var(--mut);font-size:.88rem;line-height:1.55;margin:0}
+@media(max-width:760px){.bar{padding:12px 16px;gap:10px}nav{width:100%;margin:0;justify-content:flex-start}nav button{padding:9px 12px;font-size:.88rem}main{padding:20px 14px 70px}.grid{grid-template-columns:1fr}.feature-strip{grid-template-columns:1fr}.hero{border-radius:23px}.hero:after{width:190px;height:190px;right:-100px}.card{border-radius:19px}}
 </style></head><body>
 <header><div class="bar"><div class="logo">Fit<b>AI</b></div>
 <nav id="nav"><button data-v="today">Today</button><button data-v="meals">Meals</button><button data-v="train">Train</button><button data-v="coach">Coach</button><button data-v="data">My data</button></nav></div></header>
@@ -63,6 +87,11 @@ input,select,textarea{width:100%;padding:11px 13px;border-radius:10px;border:1px
   <h1 id="heroTitle">Small steps. Stronger habits.</h1>
   <p id="heroCopy">Build a routine that fits your day, your space, and your experience. Start with a short, manageable session at home.</p>
   <div class="hero-actions"><button class="btn" id="heroWorkout">Plan a workout</button><button class="btn ghost" id="heroCoach">Ask your coach</button></div>
+ </div>
+ <div class="feature-strip" aria-label="What FitAI helps with">
+  <article class="feature-tile"><div class="feature-icon" aria-hidden="true">↗</div><strong>Workouts that fit your day</strong><p>Choose a session length and get a clear, beginner-friendly plan for home.</p></article>
+  <article class="feature-tile"><div class="feature-icon" aria-hidden="true">◌</div><strong>Everyday food tracking</strong><p>Log familiar foods and view nutrition estimates with transparent limitations.</p></article>
+  <article class="feature-tile"><div class="feature-icon" aria-hidden="true">✳</div><strong>A coach for your questions</strong><p>Explore practical habits and general guidance at your own pace.</p></article>
  </div>
  <div class="card" id="welcome" hidden><h2>Welcome! Let’s set up your coach</h2>
   <p class="mut">Your answers shape the workouts and advice. We store an age group, not your birthday.</p>
