@@ -1,0 +1,26 @@
+name: FitAI checks
+on: [push, pull_request]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      DB_PATH: /tmp/fitai-test-suite.db
+      GEMINI_API_KEY: ""
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt pytest
+      - name: Run backend regression tests
+        run: pytest -q
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Check frontend JavaScript syntax
+        run: |
+          python -c "from pathlib import Path; h=Path('static/index.html').read_text(encoding='utf-8'); s=h.rfind('<script>'); e=h.find('</script>', s); assert s >= 0 and e > s; Path('/tmp/fitai-app.js').write_text(h[s+8:e], encoding='utf-8')"
+          node --check /tmp/fitai-app.js
