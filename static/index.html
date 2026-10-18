@@ -97,7 +97,9 @@ input,select,textarea{width:100%;padding:11px 13px;border-radius:10px;border:1px
   <div class="chips" id="mins"><button class="chip" data-m="5">5 min</button><button class="chip" data-m="10" aria-pressed="true">10 min</button><button class="chip" data-m="15">15 min</button><button class="chip" data-m="20">20 min</button><button class="chip" data-m="30">30 min</button><button class="chip" data-m="40">40 min</button></div>
   <button class="btn" id="makePlan">Make my plan</button>
   <div id="planBox" hidden><div class="prog"><div id="pbar"></div></div><div id="plan"></div>
-  <div class="row"><button class="btn ghost" id="rest">Rest 30 s</button><button class="btn" id="finish" disabled>Finish workout</button></div><p class="mut" id="planNote"></p></div></div>
+  <div class="card" id="guideCard" hidden><div class="eyebrow" id="guideStep">GUIDED WORKOUT</div><h3 id="guideName">Exercise</h3><p id="guideInstructions" class="section-intro"></p><p class="mut" id="guideSets"></p>
+   <div class="row"><button class="btn ghost" id="guidePrev">Previous</button><button class="btn" id="guideNext">Next exercise</button></div></div>
+  <div class="row"><button class="btn ghost" id="startGuide">Start guided workout</button><button class="btn ghost" id="rest">Rest 30 s</button><button class="btn" id="finish" disabled>Finish workout</button></div><p class="mut" id="planNote"></p></div></div>
  <p class="mut">This week: <b id="wk">0</b> workouts finished</p>
 </section>
 
@@ -119,7 +121,8 @@ const uid=localStorage.uid||(localStorage.uid=crypto.randomUUID());
 const $=s=>document.querySelector(s), css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
 const el=(t,c,x)=>{const e=document.createElement(t);if(c)e.className=c;if(x!=null)e.textContent=x;return e};
 async function api(p,m="GET",b){const r=await fetch("/api/"+p,{method:m,headers:{"X-User-Id":uid,"Content-Type":"application/json"},body:b?JSON.stringify(b):undefined});
- const j=await r.json();if(!r.ok)throw new Error(j.detail||"Something went wrong");return j}
+ let j={};try{j=await r.json()}catch(e){j={detail:"The server returned an unexpected response. Please try again."}}
+ if(!r.ok)throw new Error(j.detail||"Something went wrong");return j}
 let tt;function toast(t){const e=$("#toast");e.textContent=t;e.classList.add("on");clearTimeout(tt);tt=setTimeout(()=>e.classList.remove("on"),2600)}
 function show(v){document.querySelectorAll(".view").forEach(e=>e.hidden=e.id!==v);
  document.querySelectorAll("#nav button").forEach(b=>b.setAttribute("aria-current",b.dataset.v===v));history.replaceState(null,"","#"+v);if(v==="today")load()}
@@ -166,22 +169,37 @@ $("#w_save").onclick=async()=>{if(await saveProf($("#w_age").value,$("#w_goal").
 $("#w_age").onchange=()=>$("#w_note").textContent=$("#w_age").value==="teen"?"Under 18: the coach focuses on balanced meals and general activity, and won’t give weight-loss advice.":"";
 let mins=10;$("#mins").onclick=e=>{if(!e.target.dataset.m)return;mins=+e.target.dataset.m;document.querySelectorAll("#mins .chip").forEach(c=>c.setAttribute("aria-pressed",c===e.target))};
 $("#heroWorkout").onclick=()=>show("train");$("#heroCoach").onclick=()=>show("coach");
-function upd(){const all=[...document.querySelectorAll("#plan input")],n=all.filter(i=>i.checked).length;$("#pbar").style.width=(n/all.length*100)+"%";$("#finish").disabled=n<all.length}
-$("#makePlan").onclick=async()=>{const r=await api("workout?minutes="+mins);const P=$("#plan");P.innerHTML="";
- r.exercises.forEach(x=>{const l=el("label","ex"),c=el("input");c.type="checkbox";c.onchange=()=>{l.classList.toggle("done",c.checked);upd()};
-  const d=el("div");d.append(el("b",null,x.name),el("div","mut",x.sets));l.append(c,d);P.append(l)});
- $("#planNote").textContent=r.note;$("#planBox").hidden=false;upd()};
+let currentPlan=[],guideIndex=0;
+function upd(){const all=[...document.querySelectorAll("#plan input")],n=all.filter(i=>i.checked).length;$("#pbar").style.width=(all.length?n/all.length*100:0)+"%";$("#finish").disabled=!all.length||n<all.length}
+function showGuide(i){if(!currentPlan.length)return;guideIndex=Math.max(0,Math.min(i,currentPlan.length-1));const x=currentPlan[guideIndex];
+ $("#guideCard").hidden=false;$("#guideStep").textContent="EXERCISE "+(guideIndex+1)+" OF "+currentPlan.length;
+ $("#guideName").textContent=x.name;$("#guideInstructions").textContent=x.instructions||"Move slowly and stay within a comfortable range.";
+ $("#guideSets").textContent=x.sets;$("#guidePrev").disabled=guideIndex===0;$("#guideNext").textContent=guideIndex===currentPlan.length-1?"Back to workout":"Next exercise";
+ [...document.querySelectorAll("#plan .ex")].forEach((e,j)=>e.style.borderColor=j===guideIndex?css("--blue"):css("--line"));
+}
+$("#startGuide").onclick=()=>showGuide(0);
+$("#guidePrev").onclick=()=>showGuide(guideIndex-1);
+$("#guideNext").onclick=()=>{if(guideIndex<currentPlan.length-1)showGuide(guideIndex+1);else $("#guideCard").hidden=true};
+$("#makePlan").onclick=async()=>{const button=$("#makePlan");button.disabled=true;button.textContent="Building your plan…";
+ try{const r=await api("workout?minutes="+mins);currentPlan=r.exercises;const P=$("#plan");P.innerHTML="";
+  r.exercises.forEach(x=>{const l=el("label","ex"),c=el("input");c.type="checkbox";c.onchange=()=>{l.classList.toggle("done",c.checked);upd()};
+   const d=el("div");d.append(el("b",null,x.name),el("div","mut",x.sets));l.append(c,d);P.append(l)});
+  $("#guideCard").hidden=true;$("#planNote").textContent=r.note;$("#planBox").hidden=false;upd();
+ }catch(e){toast(e.message)}finally{button.disabled=false;button.textContent="Make my plan"}};
 let rt;$("#rest").onclick=()=>{clearInterval(rt);let s=30;const b=$("#rest");b.textContent=`Rest ${s} s`;rt=setInterval(()=>{s--;b.textContent=s>0?`Rest ${s} s`:"Rest 30 s";if(s<=0){clearInterval(rt);toast("Rest over. Next set!")}},1000)};
-$("#finish").onclick=async()=>{await api("workout/done","POST");toast("Workout saved. Nice work!");$("#planBox").hidden=true;load()};
+$("#finish").onclick=async()=>{const b=$("#finish");b.disabled=true;try{await api("workout/done","POST");toast("Workout saved. Nice work!");$("#planBox").hidden=true;$("#guideCard").hidden=true;await load()}catch(e){toast(e.message);upd()}};
 
 function say(t,c){const b=el("div","bub "+c,t);$("#chat").append(b);b.scrollIntoView({block:"end"});return b}
-async function ask(q){if(!q.trim())return;say(q,"me");$("#q").value="";const w=say("Thinking…","ai");
- try{w.textContent=(await api("coach","POST",{question:q})).answer;load()}catch(e){w.textContent=e.message}}
-$("#ask").onclick=()=>ask($("#q").value);$("#q").onkeydown=e=>e.key==="Enter"&&ask($("#q").value);
+let lastQuestion="";
+async function ask(q){q=q.trim();if(!q||$("#ask").disabled)return;lastQuestion=q;say(q,"me");$("#q").value="";const w=say("Thinking…","ai");const button=$("#ask");button.disabled=true;button.textContent="Thinking…";
+ try{w.textContent=(await api("coach","POST",{question:q})).answer;load()}
+ catch(e){w.textContent=e.message+" ";const retry=el("button","chip","Try again");retry.type="button";retry.onclick=()=>{retry.remove();w.remove();ask(lastQuestion)};w.append(retry)}
+ finally{button.disabled=false;button.textContent="Ask"}}
+$("#ask").onclick=()=>ask($("#q").value);$("#q").onkeydown=e=>e.key==="Enter"&&$("#ask").click();
 ["What should I eat after a workout?","Give me a 5-minute stretch routine","How can I eat more protein with local foods?"].forEach(t=>{const b=el("button","chip",t);b.onclick=()=>ask(t);$("#prompts").append(b)});
 
-$("#exp").onclick=async()=>{const a=el("a");a.href=URL.createObjectURL(new Blob([JSON.stringify(await api("export"),null,2)],{type:"application/json"}));a.download="fitai-data.json";a.click()};
-$("#del").onclick=async()=>{if(confirm("Delete all your FitAI data? This cannot be undone.")){await api("data","DELETE");toast("All your data was deleted");load()}};
+$("#exp").onclick=async()=>{try{const a=el("a");a.href=URL.createObjectURL(new Blob([JSON.stringify(await api("export"),null,2)],{type:"application/json"}));a.download="fitai-data.json";a.click();URL.revokeObjectURL(a.href)}catch(e){toast(e.message)}};
+$("#del").onclick=async()=>{if(confirm("Delete all your FitAI data? This cannot be undone.")){try{await api("data","DELETE");toast("All your data was deleted");await load()}catch(e){toast(e.message)}}};
 matchMedia("(prefers-color-scheme:dark)").onchange=()=>location.reload();
 initProfile();show(location.hash.slice(1)||"today");
 </script></body></html>
