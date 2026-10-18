@@ -1,5 +1,9 @@
 import os
 from pathlib import Path
+import sys
+
+# Ensure the repository root is importable when pytest collects this file.
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 # Give tests an isolated SQLite file before importing the app.
 os.environ["DB_PATH"] = str(Path("/tmp") / "fitai-test-suite.db")
