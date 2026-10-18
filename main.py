@@ -169,12 +169,27 @@ def dashboard(x_user_id: str = Header(None)):
             "week": week, "workouts_this_week": wk}
 
 PLANS = {
-    "beginner": [("Bodyweight squats", "3 x 10"), ("Incline or knee push-ups", "3 x 8"),
-                 ("Glute bridges", "3 x 12"), ("Plank", "3 x 20 sec"), ("Marching in place", "3 x 1 min")],
-    "intermediate": [("Squats", "4 x 15"), ("Push-ups", "4 x 10"), ("Reverse lunges", "3 x 12 each leg"),
-                     ("Plank", "3 x 40 sec"), ("Mountain climbers", "3 x 30 sec")],
-    "advanced": [("Jump squats", "4 x 15"), ("Decline push-ups", "4 x 12"), ("Bulgarian split squats", "3 x 10 each leg"),
-                 ("Hollow hold", "3 x 30 sec"), ("Burpees", "4 x 10")],
+    "beginner": [("Chair squats", "2 x 8"), ("Wall push-ups", "2 x 8"),
+                 ("Glute bridges", "2 x 10"), ("Standing calf raises", "2 x 10"),
+                 ("Marching in place", "2 x 30 sec")],
+    "intermediate": [("Bodyweight squats", "3 x 10"), ("Incline push-ups", "3 x 8"),
+                     ("Reverse lunges", "2 x 8 each leg"), ("Glute bridges", "3 x 12"),
+                     ("Marching in place", "3 x 1 min")],
+    "advanced": [("Bodyweight squats", "3 x 12"), ("Push-ups", "3 x 10"),
+                 ("Reverse lunges", "3 x 10 each leg"), ("Plank", "3 x 30 sec"),
+                 ("Marching in place", "3 x 1 min")],
+}
+EXERCISE_GUIDES = {
+    "Chair squats": "Stand in front of a stable chair, move your hips back, and lower only as far as comfortable. Use the chair for support if needed.",
+    "Wall push-ups": "Place your hands on a wall at chest height. Keep your body straight and bend your elbows gently, then push back.",
+    "Glute bridges": "Lie on your back with knees bent and feet flat. Lift your hips comfortably, pause briefly, and lower slowly.",
+    "Standing calf raises": "Hold a stable surface for balance. Rise onto your toes slowly, then lower with control.",
+    "Marching in place": "March at a comfortable pace, keep your breathing steady, and use a smaller step if needed.",
+    "Bodyweight squats": "Keep your feet comfortably apart and lower your hips only as far as you can with control.",
+    "Incline push-ups": "Use a stable wall or counter. Keep your body aligned and choose a height that feels manageable.",
+    "Reverse lunges": "Hold a stable surface if needed. Step one foot back a short distance and bend only as far as comfortable.",
+    "Push-ups": "Keep your body aligned and use a wall or stable incline to make the movement easier.",
+    "Plank": "Keep your body in a comfortable straight line and breathe normally. Use a wall or counter version if needed.",
 }
 @app.get("/api/workout")
 def workout(minutes: int = 30, x_user_id: str = Header(None)):
@@ -190,13 +205,18 @@ def workout(minutes: int = 30, x_user_id: str = Header(None)):
     minutes = max(5, min(45, minutes))
     n = max(2, min(5, minutes // 5))
     plan = list(PLANS[level][:n])
-    if adult and "dumbbell" in (p["equipment"] or "").lower():
-        plan[-1] = ("Dumbbell goblet squat", "3 x 10")
+    equipment = (p["equipment"] or "").lower() if p else ""
+    if "dumbbell" in equipment and level != "beginner" and plan:
+        plan[-1] = ("Dumbbell goblet squat", "2 x 10")
+        EXERCISE_GUIDES["Dumbbell goblet squat"] = "Hold one dumbbell close to your chest and squat only as far as comfortable. Choose a light load and prioritize control."
     note = (f"Designed as a roughly {minutes}-minute beginner-friendly session; your pace and rest breaks may change the total time. "
              "Warm up gently, move at a comfortable pace, and stop if you feel pain, dizziness, or unwell. "
              "This is general guidance, not medical advice.")
     if not adult: note += " Under 18: focus on good form, rest days, and ask a teacher or coach before heavy lifting."
-    return {"level": level, "minutes": minutes, "exercises": [{"name": a, "sets": b} for a, b in plan], "note": note}
+    return {"level": level, "minutes": minutes, "exercises": [
+        {"name": name, "sets": sets, "instructions": EXERCISE_GUIDES.get(name, "Move slowly, keep a comfortable range of motion, and prioritize good form.")}
+        for name, sets in plan
+    ], "note": note}
 
 @app.post("/api/workout/done")
 def workout_done(x_user_id: str = Header(None)):
