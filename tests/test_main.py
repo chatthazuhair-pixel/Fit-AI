@@ -73,9 +73,64 @@ def test_workout_duration_is_bounded_and_scales_sets():
 
 def test_food_fallback_logs_known_foods_without_ai():
     main.KEY = ""
-    response = client.post("/api/food", headers=HEADERS, json={"text": "2 roti, 1 egg"})
+    response = client.post(
+        "/api/food", headers=HEADERS,
+        json={"text": "2 eggs, 150g cooked white rice"},
+    )
     assert response.status_code == 200
-    assert {item["name"] for item in response.json()["logged"]} == {"roti", "egg"}
+    assert {item["id"] for item in response.json()["logged"]} == {
+        "egg_boiled", "white_rice_cooked",
+    }
+    entries = {item["id"]: item for item in response.json()["logged"]}
+    assert entries["egg_boiled"]["grams"] == 100
+    assert entries["white_rice_cooked"]["grams"] == 150
+
+
+def test_food_catalogue_has_many_global_foods_and_no_local_entries():
+    response = client.get("/api/foods")
+    assert response.status_code == 200
+    foods = response.json()["foods"]
+    assert len(foods) >= 60
+    names = [food["name"].casefold() for food in foods]
+    assert any("salmon" in name for name in names)
+    assert any("quinoa" in name for name in names)
+    assert any("blueberries" in name for name in names)
+    assert all("roti" not in name and "daal" not in name for name in names)
+
+
+def test_selected_food_calories_use_exact_food_and_gram_weight():
+    response = client.post(
+        "/api/food/item", headers=HEADERS,
+        json={"food_id": "chicken_breast_cooked", "grams": 150},
+    )
+    assert response.status_code == 200
+    logged = response.json()["logged"][0]
+    assert logged["name"] == main.FOOD_BY_ID["chicken_breast_cooked"]["name"]
+    assert logged["grams"] == 150
+    assert logged["kcal"] == 247.5
+
+
+def test_selected_food_rejects_invalid_weight_and_unknown_id():
+    invalid_weight = client.post(
+        "/api/food/item", headers=HEADERS,
+        json={"food_id": "banana_raw", "grams": -5},
+    )
+    unknown_food = client.post(
+        "/api/food/item", headers=HEADERS,
+        json={"food_id": "not_a_food", "grams": 100},
+    )
+    assert invalid_weight.status_code == 422
+    assert unknown_food.status_code == 404
+
+
+def test_food_parser_does_not_guess_by_partial_substrings():
+    main.KEY = ""
+    response = client.post(
+        "/api/food", headers=HEADERS,
+        json={"text": "1 chicken sandwich"},
+    )
+    assert response.status_code == 200
+    assert response.json()["logged"] == []
 
 
 def test_data_delete_clears_profile_food_and_workouts():
