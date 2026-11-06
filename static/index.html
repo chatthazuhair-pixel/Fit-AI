@@ -43,7 +43,7 @@ input,select,textarea{width:100%;padding:11px 13px;border-radius:10px;border:1px
 .chip{border:1px solid var(--line);background:none;color:var(--ink);padding:7px 13px;border-radius:999px;cursor:pointer}
 .chip:hover,.chip[aria-pressed=true]{background:var(--blue);color:#fff;border-color:var(--blue)}
 .row{display:flex;gap:10px;flex-wrap:wrap}.row>*{flex:1 1 160px}.row>.btn{flex:0 0 auto}
-.meal{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--line)}
+.meal{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--line)}.food-picker #foodGrams{max-width:135px}
 .ex{display:flex;gap:14px;align-items:center;padding:14px;border:1px solid var(--line);border-radius:12px;margin-bottom:10px;cursor:pointer}
 .ex input{width:22px;height:22px;accent-color:var(--ok)}.ex.done{opacity:.55}.ex.done b{text-decoration:line-through}
 .prog{height:10px;background:var(--line);border-radius:9px;overflow:hidden;margin:12px 0}.prog div{height:100%;width:0;background:var(--ok);transition:width .3s}
@@ -81,8 +81,14 @@ input,select,textarea{width:100%;padding:11px 13px;border-radius:10px;border:1px
 
 <section class="view" id="meals" hidden>
  <div class="card"><h2>Log a meal</h2>
-  <div class="row"><input id="meal" placeholder="e.g. 2 roti, 150g daal, 1 egg" aria-label="Meal"><button class="btn" id="addMeal">Add meal</button></div>
-  <p class="mut">Quick add</p><div class="chips" id="quick"></div><p class="mut">Nutrition values are estimates. Mixed dishes and homemade portions can vary considerably.</p></div>
+  <div class="row"><input id="meal" placeholder="e.g. 2 eggs, 150 g cooked rice, 100 g chicken breast" aria-label="Meal"><button class="btn" id="addMeal">Add meal</button></div>
+  <p class="mut">Or search the food catalogue and enter the weight in grams.</p>
+  <div class="row food-picker"><input id="foodSearch" list="foodOptions" placeholder="Search 70+ foods…" aria-label="Search food catalogue"><datalist id="foodOptions"></datalist>
+   <input id="foodGrams" type="number" min="1" max="2000" step="1" value="100" aria-label="Food weight in grams" title="Weight in grams">
+   <button class="btn" id="addSelectedFood">Add selected food</button></div>
+  <p class="mut" id="foodHint">Choose a food to see its reference calories and typical serving size.</p>
+  <p class="mut">Quick add</p><div class="chips" id="quick"></div>
+  <p class="mut">Nutrition values are generic reference estimates per 100 g, not exact measurements or daily targets. Brands, recipes, cooking methods and portions vary.</p></div>
  <div class="card"><h2>Today’s meals</h2><div id="mealList"></div></div>
 </section>
 
@@ -151,10 +157,40 @@ async function load(){last=await api("dashboard");const t=last.totals;$("#kcal")
  const u=await api("usage");$("#use").textContent=`AI questions today: ${u.used} of ${u.limit}`;$("#ret").textContent=`Data older than ${u.retention_days} days is deleted automatically. It is tied to an anonymous ID in this browser.`}
 
 async function logMeal(text){try{const r=await api("food","POST",{text});
- toast(r.logged.length?"Added "+r.logged.map(x=>x.name).join(", ")+(r.not_in_database.length?` (not in database: ${r.not_in_database.join(", ")})`:""):"No known foods found. Try “egg, 2 roti”.");load()}catch(e){toast(e.message)}}
-$("#addMeal").onclick=()=>{logMeal($("#meal").value);$("#meal").value=""};$("#meal").onkeydown=e=>e.key==="Enter"&&$("#addMeal").click();
-["1 roti","1 egg","150g rice","150g daal","1 banana","200g milk","1 apple","100g chicken breast","100g chickpeas","100g lentils","100g fish","100g spinach","100g tomato","100g cucumber","1 mango","30g peanut butter","100g paneer"].forEach(t=>{const b=el("button","chip","+ "+t);b.onclick=()=>logMeal(t);$("#quick").append(b)});
+ toast(r.logged.length?"Added "+r.logged.map(x=>x.name).join(", ")+(r.not_in_database.length?" (not in catalogue: "+r.not_in_database.join(", ")+")":""):"No catalogue foods found. Choose an item below or use an exact food name and amount.");await load()}catch(e){toast(e.message)}}
+$("#addMeal").onclick=()=>{const text=$("#meal").value;$("#meal").value="";logMeal(text)};$("#meal").onkeydown=e=>e.key==="Enter"&&$("#addMeal").click();
 
+let foodCatalog=[];
+function selectedFood(){const value=$("#foodSearch").value.trim().toLocaleLowerCase();return foodCatalog.find(f=>f.name.toLocaleLowerCase()===value||f.id===value)}
+function updateFoodHint(){
+ const f=selectedFood(),g=Number($("#foodGrams").value);
+ if(!f){$("#foodHint").textContent="Choose a catalogue item. Values match the preparation named in each food label.";return}
+ if(!Number.isFinite(g)||g<=0){$("#foodHint").textContent="Enter a food weight in grams greater than zero.";return}
+ const kcal=f.kcal_per_100g*g/100;
+ $("#foodHint").textContent=f.category+" · "+f.kcal_per_100g+" kcal per 100 g · "+g+" g ≈ "+Math.round(kcal)+" kcal. Typical serving: "+f.serving_label+" ("+f.serving_g+" g).";
+}
+async function addCatalogFood(food,grams){
+ try{const r=await api("food/item","POST",{food_id:food.id,grams:grams});
+  toast("Added "+food.name+" · "+Math.round(r.logged[0].kcal)+" kcal estimate");await load()}
+ catch(e){toast(e.message)}
+}
+async function initFoodCatalog(){
+ try{
+  const response=await api("foods");foodCatalog=response.foods||[];
+  const dl=$("#foodOptions");dl.innerHTML="";
+  foodCatalog.forEach(f=>{const option=el("option");option.value=f.name;option.label=f.category;dl.append(option)});
+  foodCatalog.filter(f=>f.quick).forEach(f=>{
+   const b=el("button","chip","+ "+f.name);b.onclick=()=>addCatalogFood(f,f.serving_g);$("#quick").append(b);
+  });
+ }catch(e){$("#foodHint").textContent="Food catalogue could not be loaded. You can still use meal text logging.";toast(e.message)}
+}
+$("#foodSearch").oninput=updateFoodHint;$("#foodGrams").oninput=updateFoodHint;
+$("#addSelectedFood").onclick=()=>{const food=selectedFood(),grams=Number($("#foodGrams").value);
+ if(!food){toast("Choose an exact food from the suggestions.");return}
+ if(!Number.isFinite(grams)||grams<=0||grams>2000){toast("Enter a weight from 1 to 2,000 grams.");return}
+ addCatalogFood(food,grams);
+};
+initFoodCatalog();
 async function saveProf(age,goal,level,equip,diet){if(!age){toast("Choose your age group first");return false}
  try{await api("profile","POST",{age_group:age,goal,level,equipment:equip,diet});return true}catch(e){toast(e.message);return false}}
 async function initProfile(){try{const p=await api("profile");$("#welcome").hidden=!!p.age_group;
@@ -196,7 +232,7 @@ async function ask(q){q=q.trim();if(!q||$("#ask").disabled)return;lastQuestion=q
  catch(e){w.textContent=e.message+" ";const retry=el("button","chip","Try again");retry.type="button";retry.onclick=()=>{retry.remove();w.remove();ask(lastQuestion)};w.append(retry)}
  finally{button.disabled=false;button.textContent="Ask"}}
 $("#ask").onclick=()=>ask($("#q").value);$("#q").onkeydown=e=>e.key==="Enter"&&$("#ask").click();
-["What should I eat after a workout?","Give me a 5-minute stretch routine","How can I eat more protein with local foods?"].forEach(t=>{const b=el("button","chip",t);b.onclick=()=>ask(t);$("#prompts").append(b)});
+["What should I eat after a workout?","Give me a 5-minute stretch routine","How can I include a variety of everyday foods?"].forEach(t=>{const b=el("button","chip",t);b.onclick=()=>ask(t);$("#prompts").append(b)});
 
 $("#exp").onclick=async()=>{try{const a=el("a");a.href=URL.createObjectURL(new Blob([JSON.stringify(await api("export"),null,2)],{type:"application/json"}));a.download="fitai-data.json";a.click();URL.revokeObjectURL(a.href)}catch(e){toast(e.message)}};
 $("#del").onclick=async()=>{if(confirm("Delete all your FitAI data? This cannot be undone.")){try{await api("data","DELETE");toast("All your data was deleted");await load()}catch(e){toast(e.message)}}};
