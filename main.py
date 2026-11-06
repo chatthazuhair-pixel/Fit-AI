@@ -416,7 +416,7 @@ def workout(minutes: int = 30, x_user_id: str = Header(None)):
         "dizziness or unwell. This is general activity guidance, not medical advice."
     )
     if age_group != "adult":
-        note += " For users under 18, prioritise enjoyable movement, technique and recovery; ask a qualified coach or trusted adult if unsure."
+        note += " Under 18: prioritise enjoyable movement, technique and recovery; ask a qualified coach or trusted adult if unsure."
     return {
         "level": level, "minutes": minutes,
         "total_seconds": total_seconds, "planned_seconds": planned_seconds,
