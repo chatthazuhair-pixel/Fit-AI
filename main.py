@@ -97,7 +97,7 @@ def fallback_parse(text):
     }
     for part in parts:
         match = re.match(
-            r"\s*(\d+(?:\.\d+)?)\s*(kg|g|grams?|oz|ounces?|lbs?|pounds?)?\s*(?:of\s+)?(.+?)\s*$",
+            r"\s*(\d+(?:\.\d+)?)\s*(?:(kg|g|grams?|oz|ounces?|lbs?|pounds?)(?=\s|$)\s*)?(?:of\s+)?(.+?)\s*$",
             part,
         )
         if not match:
