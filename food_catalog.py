@@ -9,7 +9,7 @@ import re
 # id, display name, category, kcal, protein_g, carbs_g, fat_g,
 # typical serving grams, serving description, aliases
 _ROWS = [
-("white_rice_cooked","White rice, cooked","Grains",130,2.69,28.17,0.28,158,"1 cup",["rice","white rice","cooked rice"]),
+("white_rice_cooked","White rice, cooked","Grains",130,2.69,28.17,0.28,158,"1 cup",["rice","white rice","cooked rice","cooked white rice"]),
 ("brown_rice_cooked","Brown rice, cooked","Grains",123,2.74,25.58,0.97,195,"1 cup",["brown rice","cooked brown rice"]),
 ("pasta_cooked","Pasta, cooked","Grains",157,5.80,30.86,0.93,140,"1 cup",["pasta","cooked pasta","spaghetti","macaroni"]),
 ("oats_dry","Rolled oats, dry","Grains",389,16.89,66.27,6.90,40,"½ cup",["oats","rolled oats","dry oats"]),
