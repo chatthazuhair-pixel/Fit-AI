@@ -326,6 +326,13 @@ WORKOUT_LIBRARY = {
         ("Alternating step-backs", "Step one foot back at a time; use support and a shallow range if needed."),
         ("Bird-dog reach", "Move slowly from hands and knees, keeping your balance and breathing normally."),
     ],
+    "advanced": [
+        ("March with alternating knee lifts", "Keep the pace controlled and lift each knee only as high as feels comfortable."),
+        ("Bodyweight squats with a pause", "Pause briefly at a comfortable depth; keep each movement smooth."),
+        ("Incline push-ups", "Choose a stable surface and maintain a controlled range of motion."),
+        ("Alternating reverse lunges", "Use a comfortable step and hold support if balance is uncertain."),
+        ("Bird-dog reach", "Move slowly and focus on steady balance and breathing."),
+    ],
 }
 WARMUP_ITEMS = [
     ("Easy walk or march", "Begin gently and gradually become more comfortable with the movement."),
