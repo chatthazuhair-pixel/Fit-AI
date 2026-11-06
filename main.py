@@ -1,11 +1,12 @@
 """FitAI backend: FastAPI + SQLite + Gemini. Run: uvicorn main:app --reload"""
-import os, json, re, sqlite3, datetime as dt
+import os, json, re, sqlite3, datetime as dt, math
 import httpx
 from fastapi import FastAPI, Header, HTTPException
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from typing import Literal
 from pydantic import BaseModel
+from food_catalog import FOOD_CATALOG, FOOD_BY_ID, QUICK_FOODS, resolve_food
 
 DB = os.getenv("DB_PATH", "fitai.db")
 KEY = os.getenv("GEMINI_API_KEY", "")
@@ -16,24 +17,15 @@ RETENTION_DAYS = int(os.getenv("RETENTION_DAYS", "60"))
 
 app = FastAPI(title="FitAI")
 
-# STARTER DATA per 100 g: (kcal, protein, carbs, fat). Approximate values.
-# TODO: verify every row against USDA FoodData Central and add local dishes.
+# Generic reference nutrition values per 100 g.
+# Food labels in food_catalog.py identify the preparation state.
 NUTR = {
-    "roti": (297, 9, 50, 7), "rice": (130, 2.7, 28, 0.3),
-    "chicken breast": (165, 31, 0, 3.6), "egg": (143, 12.6, 0.7, 9.5),
-    "daal": (116, 9, 20, 0.4), "banana": (89, 1.1, 23, 0.3),
-    "milk": (61, 3.2, 4.8, 3.3), "apple": (52, 0.3, 14, 0.2),
-    "bread": (265, 9, 49, 3.2), "potato": (87, 1.9, 20, 0.1),
-    "yogurt": (61, 3.5, 4.7, 3.3), "oats": (389, 17, 66, 7),
-    # Additional approximate values per 100 g; recipes and brands vary.
-    "chickpeas": (164, 8.9, 27.4, 2.6), "lentils": (116, 9, 20, 0.4),
-    "fish": (128, 26, 0, 2.7), "beef": (250, 26, 0, 15),
-    "cucumber": (15, 0.7, 3.6, 0.1), "tomato": (18, 0.9, 3.9, 0.2),
-    "spinach": (23, 2.9, 3.6, 0.4), "mango": (60, 0.8, 15, 0.4),
-    "dates": (282, 2.5, 75, 0.4), "peanut butter": (588, 25, 20, 50),
-    "paneer": (265, 18, 1.2, 20), "beans": (127, 8.7, 22.8, 0.5),
+    food["id"]: (
+        food["kcal_per_100g"], food["protein_per_100g"],
+        food["carbs_per_100g"], food["fat_per_100g"],
+    )
+    for food in FOOD_CATALOG
 }
-PIECE_G = {"roti": 40, "egg": 50, "banana": 118, "apple": 182, "bread": 30, "potato": 150}
 
 def db():
     c = sqlite3.connect(DB); c.row_factory = sqlite3.Row; return c
@@ -94,21 +86,47 @@ def gemini(prompt, system, json_mode=False):
         raise HTTPException(502, "The AI service is unavailable right now.")
 
 def fallback_parse(text):
-    """No-AI parser: handles '2 roti, 150g rice, 1 egg'."""
+    """Parse simple meal descriptions with exact catalogue aliases only."""
     items = []
-    for part in text.lower().split(","):
-        m = re.match(r"\s*(\d+(?:\.\d+)?)\s*(g|gram|grams)?\s*(?:of\s+)?(.+)", part)
-        if not m: continue
-        qty, unit, name = float(m.group(1)), m.group(2), m.group(3).strip()
-        key = next((k for k in NUTR if k in name), None)
-        if key:
-            items.append({"name": key, "grams": qty if unit else qty * PIECE_G.get(key, 100)})
+    parts = re.split(r"[,;\n]|\band\b", (text or "").casefold())
+    factors = {
+        "g": 1, "gram": 1, "grams": 1,
+        "kg": 1000,
+        "oz": 28.3495, "ounce": 28.3495, "ounces": 28.3495,
+        "lb": 453.592, "lbs": 453.592, "pound": 453.592, "pounds": 453.592,
+    }
+    for part in parts:
+        match = re.match(
+            r"\s*(\d+(?:\.\d+)?)\s*(kg|g|grams?|oz|ounces?|lbs?|pounds?)?\s*(?:of\s+)?(.+?)\s*$",
+            part,
+        )
+        if not match:
+            continue
+        try:
+            quantity = float(match.group(1))
+        except (TypeError, ValueError):
+            continue
+        if not math.isfinite(quantity) or quantity <= 0:
+            continue
+        unit = match.group(2)
+        name = match.group(3).strip(" .")
+        food_id = resolve_food(name)
+        if not food_id:
+            continue
+        grams = quantity * factors[unit] if unit else quantity * FOOD_BY_ID[food_id]["serving_g"]
+        if math.isfinite(grams) and 0 < grams <= 2000:
+            items.append({"name": food_id, "grams": grams})
     return items
 
 class Profile(BaseModel):
     age_group: Literal["teen", "adult"]; goal: str; level: str; equipment: str; diet: str = ""
 class Meal(BaseModel):
     text: str
+
+class FoodEntry(BaseModel):
+    food_id: str
+    grams: float
+
 class Ask(BaseModel):
     question: str
 
@@ -127,6 +145,49 @@ def get_profile(x_user_id: str = Header(None)):
         r = c.execute("SELECT goal,level,equipment,diet,age_group FROM profiles WHERE uid=?", (uid,)).fetchone()
     return dict(r) if r else {}
 
+@app.get("/api/foods")
+def list_foods():
+    """Return searchable generic foods with nutrition values per 100 g."""
+    return {
+        "source_note": "Generic reference estimates per 100 g; brands, recipes and preparation vary.",
+        "foods": [
+            {key: value for key, value in food.items() if key != "aliases"} | {"quick": food["id"] in QUICK_FOODS}
+            for food in FOOD_CATALOG
+        ],
+    }
+
+
+def save_food_entry(uid, food_id, grams):
+    food = FOOD_BY_ID[food_id]
+    ratio = grams / 100.0
+    kcal = food["kcal_per_100g"] * ratio
+    protein = food["protein_per_100g"] * ratio
+    carbs = food["carbs_per_100g"] * ratio
+    fat = food["fat_per_100g"] * ratio
+    with db() as c:
+        c.execute(
+            "INSERT INTO food(uid,day,name,grams,kcal,protein,carbs,fat) VALUES(?,?,?,?,?,?,?,?)",
+            (uid, today(), food["name"], grams, kcal, protein, carbs, fat),
+        )
+    return {
+        "id": food_id, "name": food["name"], "grams": round(grams, 1),
+        "kcal": round(kcal, 1), "protein": round(protein, 1),
+        "carbs": round(carbs, 1), "fat": round(fat, 1),
+    }
+
+
+@app.post("/api/food/item")
+def log_food_item(entry: FoodEntry, x_user_id: str = Header(None)):
+    """Log one exact catalogue item using a user-entered weight in grams."""
+    uid = uid_ok(x_user_id)
+    if entry.food_id not in FOOD_BY_ID:
+        raise HTTPException(404, "That food is not in the catalogue.")
+    if not math.isfinite(entry.grams) or not 0 < entry.grams <= 2000:
+        raise HTTPException(422, "Enter a food weight greater than 0 and no more than 2,000 grams.")
+    logged = save_food_entry(uid, entry.food_id, entry.grams)
+    return {"logged": [logged], "not_in_database": []}
+
+
 @app.post("/api/food")
 def log_food(m: Meal, x_user_id: str = Header(None)):
     uid = uid_ok(x_user_id)
@@ -134,23 +195,46 @@ def log_food(m: Meal, x_user_id: str = Header(None)):
     items = []
     if KEY:
         spend_ai(uid)
-        raw = gemini(f"Meal: {text}", "Extract foods as JSON list of {name, grams}. Use these names when possible: "
-                     + ", ".join(NUTR) + ". Estimate grams from typical portions. JSON only.", json_mode=True)
-        try: items = json.loads(raw)
-        except Exception: items = []
-    if not items: items = fallback_parse(text)
+        prompt = (
+            f"Meal description: {text}\n"
+            "Return a JSON array of objects with exactly these fields: name and grams. "
+            "The name MUST be one exact food ID from this catalogue: "
+            + ", ".join(FOOD_BY_ID.keys())
+            + ". Estimate the amount in grams only when a quantity is described. "
+            "Do not invent a catalogue item and do not estimate nutrition. JSON only."
+        )
+        raw = gemini(
+            prompt,
+            "Extract food names and amounts only. Do not calculate calories or macros. "
+            "Use only exact catalogue IDs supplied in the prompt.",
+            json_mode=True,
+        )
+        try:
+            decoded = json.loads(raw)
+            if isinstance(decoded, list):
+                items = decoded
+        except (TypeError, ValueError):
+            items = []
+    if not items:
+        items = fallback_parse(text)
+
     logged, unknown = [], []
-    with db() as c:
-        for it in items:
-            name = str(it.get("name", "")).lower()
-            key = next((k for k in NUTR if k in name), None)
-            try: g = max(0, min(float(it.get("grams", 0)), 2000))
-            except Exception: continue
-            if not key: unknown.append(name); continue
-            k, p, cb, f = (v * g / 100 for v in NUTR[key])
-            c.execute("INSERT INTO food(uid,day,name,grams,kcal,protein,carbs,fat) VALUES(?,?,?,?,?,?,?,?)",
-                      (uid, today(), key, g, k, p, cb, f))
-            logged.append({"name": key, "grams": round(g), "kcal": round(k)})
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        raw_name = str(item.get("name", "")).strip()
+        food_id = resolve_food(raw_name)
+        if not food_id:
+            if raw_name:
+                unknown.append(raw_name)
+            continue
+        try:
+            grams = float(item.get("grams", 0))
+        except (TypeError, ValueError):
+            continue
+        if not math.isfinite(grams) or not 0 < grams <= 2000:
+            continue
+        logged.append(save_food_entry(uid, food_id, grams))
     return {"logged": logged, "not_in_database": unknown}
 
 @app.get("/api/dashboard")
