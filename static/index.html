@@ -43,7 +43,17 @@ input,select,textarea{width:100%;padding:11px 13px;border-radius:10px;border:1px
 .chip{border:1px solid var(--line);background:none;color:var(--ink);padding:7px 13px;border-radius:999px;cursor:pointer}
 .chip:hover,.chip[aria-pressed=true]{background:var(--blue);color:#fff;border-color:var(--blue)}
 .row{display:flex;gap:10px;flex-wrap:wrap}.row>*{flex:1 1 160px}.row>.btn{flex:0 0 auto}
-.meal{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--line)}.food-picker #foodGrams{max-width:135px}
+.meal{display:flex;justify-content:space-between;gap:14px;padding:12px 0;border-bottom:1px solid var(--line)}.meal:last-child{border-bottom:0}
+.meal-entry-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(185px,1fr));gap:12px;margin:14px 0}
+.field{display:grid;gap:6px;font-weight:800;font-size:.9rem;color:var(--mut)}
+.field input,.field select{font-weight:400;color:var(--ink)}
+.meal-entry-actions{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:12px 0}
+#foodHint{flex:1 1 250px}
+.meal-group-title,.plan-phase{font:800 .92rem Sora;color:var(--blue);margin:15px 0 4px}
+.plan-phase:first-child{margin-top:4px}
+.ex{align-items:flex-start}
+.ex input{margin-top:4px}
+.ex-copy{display:grid;gap:4px}
 .ex{display:flex;gap:14px;align-items:center;padding:14px;border:1px solid var(--line);border-radius:12px;margin-bottom:10px;cursor:pointer}
 .ex input{width:22px;height:22px;accent-color:var(--ok)}.ex.done{opacity:.55}.ex.done b{text-decoration:line-through}
 .prog{height:10px;background:var(--line);border-radius:9px;overflow:hidden;margin:12px 0}.prog div{height:100%;width:0;background:var(--ok);transition:width .3s}
@@ -80,15 +90,32 @@ input,select,textarea{width:100%;padding:11px 13px;border-radius:10px;border:1px
 </section>
 
 <section class="view" id="meals" hidden>
- <div class="card"><h2>Log a meal</h2>
-  <div class="row"><input id="meal" placeholder="e.g. 2 eggs, 150 g cooked rice, 100 g chicken breast" aria-label="Meal"><button class="btn" id="addMeal">Add meal</button></div>
-  <p class="mut">Or search the food catalogue and enter the weight in grams.</p>
-  <div class="row food-picker"><input id="foodSearch" list="foodOptions" placeholder="Search 70+ foods…" aria-label="Search food catalogue"><datalist id="foodOptions"></datalist>
-   <input id="foodGrams" type="number" min="1" max="2000" step="1" value="100" aria-label="Food weight in grams" title="Weight in grams">
-   <button class="btn" id="addSelectedFood">Add selected food</button></div>
-  <p class="mut" id="foodHint">Choose a food to see its reference calories and typical serving size.</p>
+ <div class="card meal-entry-card">
+  <div class="eyebrow">Meal diary</div><h2>Add food to a meal</h2>
+  <p class="mut">Choose the meal, search for a food, then select a familiar portion. You do not need to enter a gram amount.</p>
+  <div class="meal-entry-grid">
+   <label class="field">Meal
+    <select id="mealType" aria-label="Meal type">
+     <option>Breakfast</option><option>Lunch</option><option>Dinner</option><option selected>Snack</option>
+    </select>
+   </label>
+   <label class="field">Food
+    <input id="foodSearch" list="foodOptions" autocomplete="off" placeholder="Start typing a food name…" aria-label="Search food catalogue">
+    <datalist id="foodOptions"></datalist>
+   </label>
+   <label class="field">Portion
+    <select id="portionSelect" aria-label="Food portion"><option value="">Choose a food first</option></select>
+   </label>
+   <label class="field">How many?
+    <select id="servingsSelect" aria-label="Number of portions">
+     <option value="1" selected>1 portion</option><option value="2">2 portions</option><option value="3">3 portions</option>
+    </select>
+   </label>
+  </div>
+  <div class="meal-entry-actions"><button class="btn" id="addSelectedFood">Add to meal</button><span class="pill" id="foodHint" role="status">Choose a food to preview its estimated nutrition.</span></div>
   <p class="mut">Quick add</p><div class="chips" id="quick"></div>
-  <p class="mut">Nutrition values are generic reference estimates per 100 g, not exact measurements or daily targets. Brands, recipes, cooking methods and portions vary.</p></div>
+  <p class="mut">Standard serving weights are shown as guides. A plate or bowl can vary, so those portions are estimates. Nutrition values are generic references, not personal targets; brands, recipes and cooking methods vary.</p>
+ </div>
  <div class="card"><h2>Today’s meals</h2><div id="mealList"></div></div>
 </section>
 
@@ -117,8 +144,13 @@ input,select,textarea{width:100%;padding:11px 13px;border-radius:10px;border:1px
 </section>
 
 <section class="view" id="data" hidden>
- <div class="card"><h2>Your data</h2><p id="ret" class="mut"></p>
- <div class="row"><button class="btn ghost" id="exp">Download my data</button><button class="btn ghost" id="del">Delete all my data</button></div></div>
+ <div class="card"><div class="eyebrow">Your information</div><h2>Export your FitAI data</h2>
+ <p id="ret" class="mut"></p>
+ <p class="mut">Create a polished PDF report for reading or sharing, or keep a complete JSON backup for your records.</p>
+ <div class="row"><button class="btn" id="pdf">Download formatted PDF</button><button class="btn ghost" id="exp">Download JSON backup</button></div>
+ </div>
+ <div class="card"><h2>Privacy controls</h2><p class="mut">Deleting your data removes the profile, meal entries, workout history and usage records associated with this browser ID. This cannot be undone.</p>
+ <button class="btn ghost" id="del">Delete all my data</button></div>
 </section>
 </main><div id="toast" role="status"></div>
 
@@ -153,42 +185,82 @@ async function load(){last=await api("dashboard");const t=last.totals;$("#kcal")
  const box=$("#macros");box.innerHTML="";MAC.forEach(([k,n,c])=>{const b=el("button","macro"+(hidden.has(k)?" off":""));b.append(el("i"));b.firstChild.style.background=c();b.append(el("span",null,n),el("strong",null,t[k]+" g"));
   b.onclick=()=>{hidden.has(k)?hidden.delete(k):hidden.add(k);load()};box.append(b)});
  drawRing();drawWeek();drawItems();
- const L=$("#mealList");L.innerHTML="";last.meals.length?last.meals.forEach(m=>{const r=el("div","meal");r.append(el("span",null,`${m.name}, ${Math.round(m.grams)} g`),el("b",null,Math.round(m.kcal)+" kcal"));L.append(r)}):L.append(el("p","mut","No meals yet. Add your first one above."));
+ const L=$("#mealList");L.innerHTML="";
+ if(last.meals.length){
+  ["Breakfast","Lunch","Dinner","Snack"].forEach(type=>{
+   const group=last.meals.filter(m=>(m.meal_type||"Snack")===type);
+   if(!group.length)return;
+   L.append(el("h3","meal-group-title",type));
+   group.forEach(m=>{
+    const r=el("div","meal"),left=el("div","meal-copy");
+    left.append(el("b",null,m.name));
+    left.append(el("div","mut",(m.portion||"Standard serving")+" · about "+Math.round(m.grams)+" g"));
+    r.append(left,el("b",null,Math.round(m.kcal)+" kcal est."));
+    L.append(r);
+   });
+  });
+ }else{L.append(el("p","mut","No meals logged yet. Select a food above to build your first meal."))}
  const u=await api("usage");$("#use").textContent=`AI questions today: ${u.used} of ${u.limit}`;$("#ret").textContent=`Data older than ${u.retention_days} days is deleted automatically. It is tied to an anonymous ID in this browser.`}
 
-async function logMeal(text){try{const r=await api("food","POST",{text});
- toast(r.logged.length?"Added "+r.logged.map(x=>x.name).join(", ")+(r.not_in_database.length?" (not in catalogue: "+r.not_in_database.join(", ")+")":""):"No catalogue foods found. Choose an item below or use an exact food name and amount.");await load()}catch(e){toast(e.message)}}
-$("#addMeal").onclick=()=>{const text=$("#meal").value;$("#meal").value="";logMeal(text)};$("#meal").onkeydown=e=>e.key==="Enter"&&$("#addMeal").click();
-
 let foodCatalog=[];
-function selectedFood(){const value=$("#foodSearch").value.trim().toLocaleLowerCase();return foodCatalog.find(f=>f.name.toLocaleLowerCase()===value||f.id===value)}
-function updateFoodHint(){
- const f=selectedFood(),g=Number($("#foodGrams").value);
- if(!f){$("#foodHint").textContent="Choose a catalogue item. Values match the preparation named in each food label.";return}
- if(!Number.isFinite(g)||g<=0){$("#foodHint").textContent="Enter a food weight in grams greater than zero.";return}
- const kcal=f.kcal_per_100g*g/100;
- $("#foodHint").textContent=f.category+" · "+f.kcal_per_100g+" kcal per 100 g · "+g+" g ≈ "+Math.round(kcal)+" kcal. Typical serving: "+f.serving_label+" ("+f.serving_g+" g).";
+function selectedFood(){
+ const value=$("#foodSearch").value.trim().toLocaleLowerCase();
+ return foodCatalog.find(f=>f.name.toLocaleLowerCase()===value||f.id===value);
 }
-async function addCatalogFood(food,grams){
- try{const r=await api("food/item","POST",{food_id:food.id,grams:grams});
-  toast("Added "+food.name+" · "+Math.round(r.logged[0].kcal)+" kcal estimate");await load()}
- catch(e){toast(e.message)}
+function updatePortionOptions(food){
+ const select=$("#portionSelect");select.innerHTML="";
+ if(!food){const o=el("option",null,"Choose a food first");o.value="";select.append(o);return}
+ food.portions.forEach(portion=>{
+  const option=el("option",null,portion.label);option.value=portion.id;select.append(option);
+ });
+ select.value="standard";
+}
+function updateFoodHint(){
+ const food=selectedFood(),portionId=$("#portionSelect").value,servings=Number($("#servingsSelect").value);
+ if(!food){$("#foodHint").textContent="Choose an exact food from the suggestions to preview an estimate.";return}
+ const portion=food.portions.find(p=>p.id===portionId);
+ if(!portion){$("#foodHint").textContent=food.category+" - select a portion size.";return}
+ const estimate=food.kcal_per_100g*portion.grams*servings/100;
+ $("#foodHint").textContent=food.category+" · "+Math.round(estimate)+" kcal estimate for "+servings+" x "+portion.label+".";
+}
+function onFoodSearch(){
+ const food=selectedFood();
+ updatePortionOptions(food);
+ updateFoodHint();
+}
+async function addCatalogFood(food,portionId="standard",servings=1){
+ try{
+  const response=await api("food/item","POST",{
+   food_id:food.id,portion_id:portionId,servings:Number(servings),
+   meal_type:$("#mealType").value
+  });
+  const item=response.logged[0];
+  toast("Added to "+item.meal_type+": "+item.name+" · "+Math.round(item.kcal)+" kcal estimate");
+  await load();
+ }catch(e){toast(e.message)}
 }
 async function initFoodCatalog(){
  try{
   const response=await api("foods");foodCatalog=response.foods||[];
   const dl=$("#foodOptions");dl.innerHTML="";
-  foodCatalog.forEach(f=>{const option=el("option");option.value=f.name;option.label=f.category;dl.append(option)});
-  foodCatalog.filter(f=>f.quick).forEach(f=>{
-   const b=el("button","chip","+ "+f.name);b.onclick=()=>addCatalogFood(f,f.serving_g);$("#quick").append(b);
+  foodCatalog.forEach(food=>{
+   const option=el("option");option.value=food.name;option.label=food.category;dl.append(option);
   });
- }catch(e){$("#foodHint").textContent="Food catalogue could not be loaded. You can still use meal text logging.";toast(e.message)}
+  foodCatalog.filter(food=>food.quick).forEach(food=>{
+   const button=el("button","chip","+ "+food.name);
+   button.onclick=()=>addCatalogFood(food,"standard",1);
+   $("#quick").append(button);
+  });
+  if(foodCatalog.length)$("#foodHint").textContent="Search the catalogue, then select a suggested food.";
+ }catch(e){$("#foodHint").textContent="The food catalogue could not be loaded. Please refresh and try again.";toast(e.message)}
 }
-$("#foodSearch").oninput=updateFoodHint;$("#foodGrams").oninput=updateFoodHint;
-$("#addSelectedFood").onclick=()=>{const food=selectedFood(),grams=Number($("#foodGrams").value);
+$("#foodSearch").oninput=onFoodSearch;
+$("#portionSelect").onchange=updateFoodHint;
+$("#servingsSelect").onchange=updateFoodHint;
+$("#addSelectedFood").onclick=()=>{
+ const food=selectedFood();
  if(!food){toast("Choose an exact food from the suggestions.");return}
- if(!Number.isFinite(grams)||grams<=0||grams>2000){toast("Enter a weight from 1 to 2,000 grams.");return}
- addCatalogFood(food,grams);
+ addCatalogFood(food,$("#portionSelect").value,$("#servingsSelect").value);
 };
 initFoodCatalog();
 async function saveProf(age,goal,level,equip,diet){if(!age){toast("Choose your age group first");return false}
@@ -208,7 +280,7 @@ $("#heroWorkout").onclick=()=>show("train");$("#heroCoach").onclick=()=>show("co
 let currentPlan=[],guideIndex=0;
 function upd(){const all=[...document.querySelectorAll("#plan input")],n=all.filter(i=>i.checked).length;$("#pbar").style.width=(all.length?n/all.length*100:0)+"%";$("#finish").disabled=!all.length||n<all.length}
 function showGuide(i){if(!currentPlan.length)return;guideIndex=Math.max(0,Math.min(i,currentPlan.length-1));const x=currentPlan[guideIndex];
- $("#guideCard").hidden=false;$("#guideStep").textContent="EXERCISE "+(guideIndex+1)+" OF "+currentPlan.length;
+ $("#guideCard").hidden=false;$("#guideStep").textContent=(x.block||"EXERCISE").toUpperCase()+" · "+(guideIndex+1)+" OF "+currentPlan.length;
  $("#guideName").textContent=x.name;$("#guideInstructions").textContent=x.instructions||"Move slowly and stay within a comfortable range.";
  $("#guideSets").textContent=x.sets;$("#guidePrev").disabled=guideIndex===0;$("#guideNext").textContent=guideIndex===currentPlan.length-1?"Back to workout":"Next exercise";
  [...document.querySelectorAll("#plan .ex")].forEach((e,j)=>e.style.borderColor=j===guideIndex?css("--blue"):css("--line"));
@@ -217,10 +289,19 @@ $("#startGuide").onclick=()=>showGuide(0);
 $("#guidePrev").onclick=()=>showGuide(guideIndex-1);
 $("#guideNext").onclick=()=>{if(guideIndex<currentPlan.length-1)showGuide(guideIndex+1);else $("#guideCard").hidden=true};
 $("#makePlan").onclick=async()=>{const button=$("#makePlan");button.disabled=true;button.textContent="Building your plan…";
- try{const r=await api("workout?minutes="+mins);currentPlan=r.exercises;const P=$("#plan");P.innerHTML="";
-  r.exercises.forEach(x=>{const l=el("label","ex"),c=el("input");c.type="checkbox";c.onchange=()=>{l.classList.toggle("done",c.checked);upd()};
-   const d=el("div");d.append(el("b",null,x.name),el("div","mut",x.sets));l.append(c,d);P.append(l)});
-  $("#guideCard").hidden=true;$("#planNote").textContent=r.note;$("#planBox").hidden=false;upd();
+ try{
+  const r=await api("workout?minutes="+mins);currentPlan=r.exercises;const P=$("#plan");P.innerHTML="";
+  let activeBlock="";
+  r.exercises.forEach(x=>{
+   if(x.block!==activeBlock){P.append(el("h3","plan-phase",x.block));activeBlock=x.block}
+   const l=el("label","ex"),c=el("input");c.type="checkbox";c.onchange=()=>{l.classList.toggle("done",c.checked);upd()};
+   const d=el("div","ex-copy");
+   d.append(el("b",null,x.name),el("div","mut",x.sets),el("div","mut",x.instructions));
+   l.append(c,d);P.append(l);
+  });
+  $("#guideCard").hidden=true;
+  $("#planNote").textContent=r.note;
+  $("#planBox").hidden=false;upd();
  }catch(e){toast(e.message)}finally{button.disabled=false;button.textContent="Make my plan"}};
 let rt;$("#rest").onclick=()=>{clearInterval(rt);let s=30;const b=$("#rest");b.textContent=`Rest ${s} s`;rt=setInterval(()=>{s--;b.textContent=s>0?`Rest ${s} s`:"Rest 30 s";if(s<=0){clearInterval(rt);toast("Rest over. Next set!")}},1000)};
 $("#finish").onclick=async()=>{const b=$("#finish");b.disabled=true;try{await api("workout/done","POST");toast("Workout saved. Nice work!");$("#planBox").hidden=true;$("#guideCard").hidden=true;await load()}catch(e){toast(e.message);upd()}};
@@ -234,7 +315,23 @@ async function ask(q){q=q.trim();if(!q||$("#ask").disabled)return;lastQuestion=q
 $("#ask").onclick=()=>ask($("#q").value);$("#q").onkeydown=e=>e.key==="Enter"&&$("#ask").click();
 ["What should I eat after a workout?","Give me a 5-minute stretch routine","How can I include a variety of everyday foods?"].forEach(t=>{const b=el("button","chip",t);b.onclick=()=>ask(t);$("#prompts").append(b)});
 
-$("#exp").onclick=async()=>{try{const a=el("a");a.href=URL.createObjectURL(new Blob([JSON.stringify(await api("export"),null,2)],{type:"application/json"}));a.download="fitai-data.json";a.click();URL.revokeObjectURL(a.href)}catch(e){toast(e.message)}};
+$("#exp").onclick=async()=>{const button=$("#exp");button.disabled=true;
+ try{
+  const blob=new Blob([JSON.stringify(await api("export"),null,2)],{type:"application/json"});
+  const url=URL.createObjectURL(blob),a=el("a");a.href=url;a.download="fitai-data.json";a.click();
+  setTimeout(()=>URL.revokeObjectURL(url),1000);toast("JSON backup downloaded");
+ }catch(e){toast(e.message)}finally{button.disabled=false}
+};
+$("#pdf").onclick=async()=>{
+ const button=$("#pdf");button.disabled=true;button.textContent="Preparing PDF…";
+ try{
+  const response=await fetch("/api/export/pdf",{headers:{"X-User-Id":uid}});
+  if(!response.ok){let data={};try{data=await response.json()}catch(e){}throw new Error(data.detail||"Could not create the PDF report")}
+  const blob=await response.blob(),url=URL.createObjectURL(blob),a=el("a");
+  a.href=url;a.download="fitai-report.pdf";a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+  toast("Formatted PDF report downloaded");
+ }catch(e){toast(e.message)}finally{button.disabled=false;button.textContent="Download formatted PDF"}
+};
 $("#del").onclick=async()=>{if(confirm("Delete all your FitAI data? This cannot be undone.")){try{await api("data","DELETE");toast("All your data was deleted");await load()}catch(e){toast(e.message)}}};
 matchMedia("(prefers-color-scheme:dark)").onchange=()=>location.reload();
 initProfile();show(location.hash.slice(1)||"today");
